@@ -10,8 +10,10 @@ use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
 use App\Entity\WorkoutProgram;
 use App\Entity\WorkoutProgramExercise;
+use App\Entity\WeeklyGoal;
 use App\Repository\ExerciseRepository;
 use App\Repository\UserProfileRepository;
+use App\Repository\WeeklyGoalRepository;
 use App\Repository\WorkoutProgramRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Service\Workout\OneRepMaxCalculator;
@@ -34,6 +36,7 @@ final class SeedDemoDataCommand extends Command
         private readonly ExerciseRepository $exerciseRepository,
         private readonly WorkoutSessionRepository $sessionRepository,
         private readonly WorkoutProgramRepository $programRepository,
+        private readonly WeeklyGoalRepository $weeklyGoalRepository,
         private readonly OneRepMaxCalculator $oneRepMaxCalculator,
     ) {
         parent::__construct();
@@ -47,6 +50,7 @@ final class SeedDemoDataCommand extends Command
         $exercises = $this->seedExercises($profile);
         $this->seedCompletedSession($profile, $exercises);
         $this->seedPrograms($profile, $exercises);
+        $this->seedWeeklyGoal($profile);
         $this->seedActiveSession($profile, $exercises);
 
         $this->entityManager->flush();
@@ -194,7 +198,8 @@ final class SeedDemoDataCommand extends Command
 
         $program = (new WorkoutProgram($profile))
             ->setName('Hypertrophie Push')
-            ->setDescription('Pecs, epaules, triceps');
+            ->setDescription('Pecs, epaules, triceps')
+            ->setEstimatedDurationMinutes(45);
 
         $this->entityManager->persist($program);
 
@@ -208,10 +213,31 @@ final class SeedDemoDataCommand extends Command
                 ->setTargetSets($sets)
                 ->setTargetRepsMin($repsMin)
                 ->setTargetRepsMax($repsMax)
+                ->setTargetWeight(match ($position) {
+                    1 => 90.0,
+                    2 => 50.0,
+                    default => 18.0,
+                })
                 ->setRestSeconds(90);
 
             $this->entityManager->persist($programExercise);
         }
+    }
+
+    private function seedWeeklyGoal(UserProfile $profile): void
+    {
+        $weekStart = (new \DateTimeImmutable())->modify('monday this week')->setTime(0, 0);
+
+        if ($this->weeklyGoalRepository->findForProfileAndWeek($profile, $weekStart)) {
+            return;
+        }
+
+        $goal = (new WeeklyGoal($profile, $weekStart))
+            ->setTargetWorkouts($profile->getWeeklyWorkoutGoal())
+            ->setTargetVolume($profile->getWeeklyVolumeGoal())
+            ->setTargetTrainingMinutes(180);
+
+        $this->entityManager->persist($goal);
     }
 
     /**

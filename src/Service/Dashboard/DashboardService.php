@@ -16,6 +16,7 @@ final class DashboardService
         private readonly WorkoutSetRepository $setRepository,
         private readonly PersonalRecordRepository $recordRepository,
         private readonly WorkoutSessionRepository $sessionRepository,
+        private readonly WeeklyGoalService $weeklyGoalService,
     ) {
     }
 
@@ -43,6 +44,7 @@ final class DashboardService
                 'dateLabel' => $this->formatDateLabel($now),
                 'activity' => $this->buildActivity($activeSession, $completedThisWeek, $now),
                 'weekly' => $this->buildWeekly($completedThisWeek, $completedPreviousWeek, $weekStart),
+                'weeklyGoal' => $this->weeklyGoalService->buildProgress($profile, $now),
                 'recentRecords' => $this->buildRecentRecords($profile),
                 'stats' => [
                     'weeklyVolumeTons' => $this->formatTons($this->sumVolume($completedThisWeek)),
@@ -282,6 +284,11 @@ final class DashboardService
             'recentRecords' => [
                 ['exercise' => 'Squat', 'value' => '140', 'unit' => 'kg x 5', 'date' => 'Aujourd\'hui', 'gain' => '+5kg', 'previous' => 'vs 135kg', 'new' => true],
                 ['exercise' => 'Developpe couche', 'value' => '95', 'unit' => 'kg x 6', 'date' => 'Il y a 3j', 'gain' => '+2.5kg', 'previous' => 'vs 92.5kg'],
+            ],
+            'weeklyGoal' => [
+                'workouts' => ['current' => 3, 'target' => 4, 'percent' => 75],
+                'volume' => ['current' => 14200, 'target' => 14000, 'percent' => 100, 'trendPercent' => 12],
+                'trainingMinutes' => ['current' => 135, 'target' => 180, 'percent' => 75],
             ],
             'stats' => ['weeklyVolumeTons' => '14.2', 'streakDays' => 4],
             'cta' => ['active' => true, 'label' => 'En cours', 'title' => 'Hypertrophie Push', 'meta' => '45 Min - 6 Exos'],

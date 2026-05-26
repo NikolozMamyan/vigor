@@ -3,14 +3,18 @@
 namespace App\Service\Exercise;
 
 use App\Entity\Exercise;
+use App\Entity\UserProfile;
 use App\Repository\ExerciseRepository;
 use App\Repository\UserProfileRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\String\Slugger\AsciiSlugger;
 
 final class ExerciseCatalogService
 {
     public function __construct(
         private readonly ExerciseRepository $exerciseRepository,
         private readonly UserProfileRepository $profileRepository,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -63,6 +67,40 @@ final class ExerciseCatalogService
         }
     }
 
+    public function createCustom(UserProfile $profile, string $name, string $muscleGroup, string $equipment, ?string $imageUrl = null): Exercise
+    {
+        $name = trim($name);
+        $muscleGroup = trim($muscleGroup);
+        $equipment = trim($equipment);
+        $imageUrl = null === $imageUrl ? null : trim($imageUrl);
+
+        if ('' === $name || '' === $muscleGroup || '' === $equipment) {
+            throw new \InvalidArgumentException('Name, muscleGroup and equipment are required.');
+        }
+
+        if (mb_strlen($name) > 120 || mb_strlen($muscleGroup) > 60 || mb_strlen($equipment) > 60) {
+            throw new \InvalidArgumentException('Exercise fields are too long.');
+        }
+
+        if (null !== $imageUrl && mb_strlen($imageUrl) > 255) {
+            throw new \InvalidArgumentException('Image URL is too long.');
+        }
+
+        $exercise = (new Exercise())
+            ->setName($name)
+            ->setSlug($this->uniqueSlug($name))
+            ->setMuscleGroup($muscleGroup)
+            ->setEquipment($equipment)
+            ->setImageUrl('' === $imageUrl ? null : $imageUrl)
+            ->setSource(Exercise::SOURCE_CUSTOM)
+            ->setCreatedByProfile($profile);
+
+        $this->entityManager->persist($exercise);
+        $this->entityManager->flush();
+
+        return $exercise;
+    }
+
     /**
      * @param list<Exercise> $exercises
      *
@@ -104,9 +142,10 @@ final class ExerciseCatalogService
     /**
      * @return array<string, mixed>
      */
-    private function normalizeExercise(Exercise $exercise): array
+    public function normalizeExercise(Exercise $exercise): array
     {
         return [
+            'id' => $exercise->getId(),
             'name' => $exercise->getName(),
             'category' => $exercise->getMuscleGroup(),
             'tag' => $exercise->getEquipment(),
@@ -114,6 +153,22 @@ final class ExerciseCatalogService
             'source' => $exercise->getSource(),
             'isCustom' => Exercise::SOURCE_CUSTOM === $exercise->getSource(),
         ];
+    }
+
+    private function uniqueSlug(string $name): string
+    {
+        $slugger = new AsciiSlugger();
+        $baseSlug = mb_strtolower((string) $slugger->slug($name));
+        $baseSlug = '' === $baseSlug ? 'custom-exercise' : $baseSlug;
+        $slug = $baseSlug;
+        $suffix = 2;
+
+        while ($this->exerciseRepository->findOneBy(['slug' => $slug])) {
+            $slug = $baseSlug.'-'.$suffix;
+            ++$suffix;
+        }
+
+        return $slug;
     }
 
     /**

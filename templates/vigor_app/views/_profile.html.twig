@@ -7,19 +7,19 @@
                 <div class="relative mb-4">
                     <div class="absolute inset-0 bg-app-accent rounded-full blur-md opacity-40"></div>
                     <div class="w-24 h-24 rounded-full border-2 border-app-accent overflow-hidden relative z-10">
-                        <img src="https://placehold.co/200x200/18181b/ccff00?text=AX" alt="Avatar" class="w-full h-full object-cover">
+                        <img src="{{ profileView.profile.avatarUrl }}" alt="Avatar {{ profileView.profile.displayName }}" class="w-full h-full object-cover">
                     </div>
                     <button type="button" class="absolute bottom-0 right-0 w-8 h-8 bg-app-accent text-black rounded-full flex items-center justify-center z-20 shadow-neon hover:scale-110 transition-transform" aria-label="Modifier l'avatar">
                         <i data-lucide="camera" class="w-4 h-4"></i>
                     </button>
                 </div>
 
-                <h2 class="text-2xl font-extrabold text-white mb-1">Alex</h2>
-                <p class="text-sm text-app-muted mb-4">@alexvigor - Membre depuis Jan 2025</p>
+                <h2 class="text-2xl font-extrabold text-white mb-1">{{ profileView.profile.displayName }}</h2>
+                <p class="text-sm text-app-muted mb-4">@{{ profileView.profile.username }} - Membre depuis {{ profileView.profile.joinedLabel }}</p>
 
                 <div class="flex items-center gap-2 bg-app-accent/10 border border-app-accent/30 rounded-full px-4 py-1.5">
                     <i data-lucide="award" class="w-4 h-4 text-app-accent"></i>
-                    <span class="text-xs font-bold text-app-accent uppercase tracking-wider">Niveau 12 - Avance</span>
+                    <span class="text-xs font-bold text-app-accent uppercase tracking-wider">{{ profileView.profile.levelLabel }}</span>
                 </div>
             </div>
         </div>
@@ -35,6 +35,28 @@
                 <p class="text-2xl font-extrabold text-white tabular-nums">
                     {{ stat.value }}{% if stat.suffix|default(false) %}<span class="text-sm text-app-muted ml-1">{{ stat.suffix }}</span>{% endif %}
                 </p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="glass-panel rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Objectifs hebdo</h3>
+            <span class="text-[10px] text-app-muted font-bold">{{ profileView.weeklyGoal.weekStartDate|default('') }}</span>
+        </div>
+        {% for goal in [
+            {label: 'Seances', current: profileView.weeklyGoal.workouts.current, target: profileView.weeklyGoal.workouts.target, percent: profileView.weeklyGoal.workouts.percent},
+            {label: 'Volume', current: (profileView.weeklyGoal.volume.current / 1000)|number_format(1, '.', ''), target: (profileView.weeklyGoal.volume.target / 1000)|number_format(1, '.', ''), percent: profileView.weeklyGoal.volume.percent},
+            {label: 'Minutes', current: profileView.weeklyGoal.trainingMinutes.current, target: profileView.weeklyGoal.trainingMinutes.target, percent: profileView.weeklyGoal.trainingMinutes.percent}
+        ] %}
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] text-app-muted font-bold uppercase tracking-wider">{{ goal.label }}</span>
+                    <span class="text-[11px] text-white font-bold tabular-nums">{{ goal.current }}/{{ goal.target }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-app-accent" style="width: {{ goal.percent }}%"></div>
+                </div>
             </div>
         {% endfor %}
     </div>

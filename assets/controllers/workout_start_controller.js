@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['modal', 'startButton'];
+    static targets = ['modal', 'startButton', 'programButton'];
 
     open() {
         this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
@@ -34,5 +34,33 @@ export default class extends Controller {
 
         this.startButtonTarget.disabled = false;
         this.startButtonTarget.classList.remove('opacity-70');
+    }
+
+    async startProgram(event) {
+        const button = event.currentTarget;
+        const programId = button.dataset.programId;
+
+        if (!programId) {
+            return;
+        }
+
+        button.disabled = true;
+        button.classList.add('opacity-70');
+
+        try {
+            const response = await fetch(`/api/workout-sessions/from-program/${programId}`, {
+                method: 'POST',
+                headers: { Accept: 'application/json' },
+            });
+
+            if (response.ok) {
+                window.location.href = '/app/workout';
+                return;
+            }
+        } catch {
+        }
+
+        button.disabled = false;
+        button.classList.remove('opacity-70');
     }
 }

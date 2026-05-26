@@ -37,7 +37,12 @@ final class WorkoutProgramController extends AbstractController
             }
 
             $payload = json_decode($request->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
-            $program = $programService->create($profile, $exercise, (string) ($payload['name'] ?? 'Mon programme'));
+            $program = $programService->create(
+                $profile,
+                $exercise,
+                (string) ($payload['name'] ?? 'Mon programme'),
+                $this->resolveExerciseConfigs($payload['exercises'] ?? [], $exerciseRepository),
+            );
 
             return $this->json($this->normalizeProgram($program, $programExerciseRepository), JsonResponse::HTTP_CREATED);
         } catch (\InvalidArgumentException|\JsonException $exception) {
@@ -45,7 +50,16 @@ final class WorkoutProgramController extends AbstractController
         }
     }
 
+    #[Route('/api/workout-programs/{id}', name: 'api_workout_programs_delete', methods: ['DELETE'])]
+    public function delete(WorkoutProgram $program, WorkoutProgramService $programService): JsonResponse
+    {
+        $programService->delete($program);
+
+        return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
+    }
+
     #[Route('/api/workout-programs/{id}/start', name: 'api_workout_programs_start', methods: ['POST'])]
+    #[Route('/api/workout-sessions/from-program/{id}', name: 'api_workout_sessions_start_from_program', methods: ['POST'])]
     public function start(WorkoutProgram $program, WorkoutSessionService $sessionService): JsonResponse
     {
         try {
@@ -74,5 +88,43 @@ final class WorkoutProgramController extends AbstractController
             'description' => $program->getDescription(),
             'exerciseCount' => count($exercises),
         ];
+    }
+
+    /**
+     * @param mixed $exercisePayload
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function resolveExerciseConfigs(mixed $exercisePayload, ExerciseRepository $exerciseRepository): array
+    {
+        if (!is_array($exercisePayload) || [] === $exercisePayload) {
+            return [];
+        }
+
+        $configs = [];
+
+        foreach ($exercisePayload as $index => $item) {
+            if (!is_array($item)) {
+                throw new \InvalidArgumentException('Exercise configuration is invalid.');
+            }
+
+            $exerciseId = (int) ($item['exerciseId'] ?? 0);
+            $exercise = $exerciseRepository->find($exerciseId);
+
+            if (!$exercise) {
+                throw new \InvalidArgumentException(sprintf('Exercise #%d was not found.', $index + 1));
+            }
+
+            $configs[] = [
+                'exercise' => $exercise,
+                'targetSets' => (int) ($item['targetSets'] ?? 3),
+                'targetRepsMin' => (int) ($item['targetRepsMin'] ?? 8),
+                'targetRepsMax' => (int) ($item['targetRepsMax'] ?? ($item['targetRepsMin'] ?? 8)),
+                'targetWeight' => isset($item['targetWeight']) && '' !== $item['targetWeight'] ? (float) $item['targetWeight'] : null,
+                'restSeconds' => (int) ($item['restSeconds'] ?? 90),
+            ];
+        }
+
+        return $configs;
     }
 }

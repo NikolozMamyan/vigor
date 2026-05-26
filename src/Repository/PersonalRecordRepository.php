@@ -33,4 +33,14 @@ final class PersonalRecordRepository extends ServiceEntityRepository implements 
     {
         return $this->findBy(['profile' => $profile], ['achievedAt' => 'DESC'], $limit);
     }
+
+    public function countForProfile(UserProfile $profile): int
+    {
+        return (int) $this->createQueryBuilder('record')
+            ->select('COUNT(record.id)')
+            ->andWhere('record.profile = :profile')
+            ->setParameter('profile', $profile)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

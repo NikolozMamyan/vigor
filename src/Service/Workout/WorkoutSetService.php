@@ -2,10 +2,8 @@
 
 namespace App\Service\Workout;
 
-use App\Entity\PersonalRecord;
 use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
-use App\Repository\PersonalRecordReaderInterface;
 use App\Repository\WorkoutSetReaderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -14,9 +12,8 @@ final class WorkoutSetService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly WorkoutSetReaderInterface $setRepository,
-        private readonly PersonalRecordReaderInterface $recordRepository,
         private readonly OneRepMaxCalculator $oneRepMaxCalculator,
-        private readonly PersonalRecordDetector $recordDetector,
+        private readonly PersonalRecordService $personalRecordService,
     ) {
     }
 
@@ -65,31 +62,18 @@ final class WorkoutSetService
     {
         $this->assertValidSetData($set->getWeight(), $set->getReps());
 
-        $sessionExercise = $set->getSessionExercise();
-        $session = $sessionExercise->getSession();
-        $profile = $session->getProfile();
-        $exercise = $sessionExercise->getExercise();
         $estimate = $this->oneRepMaxCalculator->estimate($set->getWeight(), $set->getReps());
-        $currentBest = $this->recordRepository->findBest($profile, $exercise, PersonalRecord::METRIC_ESTIMATED_1RM);
-        $recordCreated = false;
-        $recordValue = null;
 
         $set->complete(new \DateTimeImmutable(), $estimate);
-
-        if ($this->recordDetector->shouldCreateRecord($estimate, $currentBest)) {
-            $record = $this->recordDetector->buildRecord($profile, $exercise, $set, $estimate, $currentBest);
-            $this->entityManager->persist($record);
-            $recordCreated = true;
-            $recordValue = $record->getValue();
-        }
+        $record = $this->personalRecordService->detectAfterCompletedSet($set, $estimate);
 
         $this->entityManager->flush();
 
         return [
             'set' => $set,
             'estimatedOneRepMax' => $estimate,
-            'recordCreated' => $recordCreated,
-            'recordValue' => $recordValue,
+            'recordCreated' => null !== $record,
+            'recordValue' => $record?->getValue(),
         ];
     }
 

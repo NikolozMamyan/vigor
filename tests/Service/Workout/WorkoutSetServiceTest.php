@@ -13,6 +13,7 @@ use App\Repository\PersonalRecordReaderInterface;
 use App\Repository\WorkoutSetReaderInterface;
 use App\Service\Workout\OneRepMaxCalculator;
 use App\Service\Workout\PersonalRecordDetector;
+use App\Service\Workout\PersonalRecordService;
 use App\Service\Workout\WorkoutSetService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -92,9 +93,12 @@ final class WorkoutSetServiceTest extends TestCase
         return new WorkoutSetService(
             $entityManager,
             $setRepository,
-            $this->createStub(PersonalRecordReaderInterface::class),
             new OneRepMaxCalculator(),
-            new PersonalRecordDetector(new OneRepMaxCalculator()),
+            new PersonalRecordService(
+                $entityManager,
+                $this->createStub(PersonalRecordReaderInterface::class),
+                new PersonalRecordDetector(),
+            ),
         );
     }
 

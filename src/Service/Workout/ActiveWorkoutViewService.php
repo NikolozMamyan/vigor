@@ -168,7 +168,12 @@ final class ActiveWorkoutViewService
                 'name' => $program->getName(),
                 'description' => $program->getDescription() ?? 'Programme personnalise',
                 'exerciseCount' => count($exercises),
-                'meta' => sprintf('%d exo%s', count($exercises), count($exercises) > 1 ? 's' : ''),
+                'meta' => $this->programMeta($program->getEstimatedDurationMinutes(), count($exercises)),
+                'exercises' => array_map(fn ($programExercise): array => [
+                    'name' => $programExercise->getExercise()->getName(),
+                    'muscleGroup' => $programExercise->getExercise()->getMuscleGroup(),
+                    'target' => $this->programExerciseTarget($programExercise),
+                ], $exercises),
             ];
         }
 
@@ -176,6 +181,33 @@ final class ActiveWorkoutViewService
             'hasActiveSession' => false,
             'programs' => $programs,
         ];
+    }
+
+    private function programMeta(?int $durationMinutes, int $exerciseCount): string
+    {
+        $exerciseLabel = sprintf('%d exo%s', $exerciseCount, $exerciseCount > 1 ? 's' : '');
+
+        if (!$durationMinutes) {
+            return $exerciseLabel;
+        }
+
+        return sprintf('%d min - %s', $durationMinutes, $exerciseLabel);
+    }
+
+    private function programExerciseTarget(\App\Entity\WorkoutProgramExercise $programExercise): string
+    {
+        $weight = $programExercise->getTargetWeight();
+        $reps = $programExercise->getTargetRepsMin() === $programExercise->getTargetRepsMax()
+            ? (string) $programExercise->getTargetRepsMin()
+            : sprintf('%d-%d', $programExercise->getTargetRepsMin(), $programExercise->getTargetRepsMax());
+
+        $target = sprintf('%d x %s reps', $programExercise->getTargetSets(), $reps);
+
+        if (null !== $weight && $weight > 0) {
+            $target = $this->formatNumber($weight).'kg - '.$target;
+        }
+
+        return $target;
     }
 
     /**

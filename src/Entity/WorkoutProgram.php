@@ -24,6 +24,9 @@ class WorkoutProgram
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $estimatedDurationMinutes = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -63,6 +66,18 @@ class WorkoutProgram
     public function setDescription(?string $description): self
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function getEstimatedDurationMinutes(): ?int
+    {
+        return $this->estimatedDurationMinutes;
+    }
+
+    public function setEstimatedDurationMinutes(?int $estimatedDurationMinutes): self
+    {
+        $this->estimatedDurationMinutes = $estimatedDurationMinutes;
 
         return $this;
     }

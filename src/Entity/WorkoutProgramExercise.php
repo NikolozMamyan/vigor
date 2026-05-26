@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\WorkoutProgramExerciseRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: WorkoutProgramExerciseRepository::class)]
@@ -33,6 +34,9 @@ class WorkoutProgramExercise
 
     #[ORM\Column]
     private int $targetRepsMax = 10;
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 6, scale: 2, nullable: true)]
+    private ?string $targetWeight = null;
 
     #[ORM\Column]
     private int $restSeconds = 90;
@@ -102,6 +106,18 @@ class WorkoutProgramExercise
     public function setTargetRepsMax(int $targetRepsMax): self
     {
         $this->targetRepsMax = $targetRepsMax;
+
+        return $this;
+    }
+
+    public function getTargetWeight(): ?float
+    {
+        return null === $this->targetWeight ? null : (float) $this->targetWeight;
+    }
+
+    public function setTargetWeight(?float $targetWeight): self
+    {
+        $this->targetWeight = null === $targetWeight ? null : number_format($targetWeight, 2, '.', '');
 
         return $this;
     }

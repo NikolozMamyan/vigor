@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
+use App\Repository\WorkoutSessionExerciseRepository;
 use App\Service\Workout\WorkoutSetService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -60,6 +61,30 @@ final class WorkoutSetController extends AbstractController
     {
         try {
             $payload = $this->payload($request);
+            $position = isset($payload['position']) ? (int) $payload['position'] : $setService->nextPosition($sessionExercise);
+            $set = $setService->create($sessionExercise, $position, (float) $payload['weight'], (int) $payload['reps']);
+
+            return $this->json($this->normalizeSet($set), JsonResponse::HTTP_CREATED);
+        } catch (\InvalidArgumentException|\JsonException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    #[Route('/api/workout-sets', name: 'api_workout_sets_create_from_payload', methods: ['POST'])]
+    public function createFromPayload(
+        Request $request,
+        WorkoutSessionExerciseRepository $sessionExerciseRepository,
+        WorkoutSetService $setService,
+    ): JsonResponse {
+        try {
+            $payload = $this->payload($request);
+            $sessionExerciseId = (int) ($payload['sessionExerciseId'] ?? 0);
+            $sessionExercise = $sessionExerciseRepository->find($sessionExerciseId);
+
+            if (!$sessionExercise) {
+                return $this->json(['error' => 'Session exercise not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $position = isset($payload['position']) ? (int) $payload['position'] : $setService->nextPosition($sessionExercise);
             $set = $setService->create($sessionExercise, $position, (float) $payload['weight'], (int) $payload['reps']);
 

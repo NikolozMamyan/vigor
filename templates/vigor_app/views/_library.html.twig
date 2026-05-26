@@ -1,6 +1,11 @@
 <section id="view-library" class="tab-content {{ activeView == 'library' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="library" data-controller="exercise-search">
     <div class="pt-2">
-        <h2 class="text-3xl font-extrabold mb-4">Mouvements</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-3xl font-extrabold">Mouvements</h2>
+            <button type="button" class="w-10 h-10 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="exercise-search#openCreate" aria-label="Creer un exercice">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </div>
         <div class="relative group">
             <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                 <i data-lucide="search" class="w-5 h-5 text-app-muted group-focus-within:text-white transition-colors"></i>
@@ -46,5 +51,29 @@
                 </div>
             </article>
         {% endfor %}
+    </div>
+
+    <div class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-300" data-exercise-search-target="modal">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-xl" data-action="click->exercise-search#closeCreate"></div>
+        <div class="absolute left-1/2 bottom-6 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 glass-panel rounded-[2rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)] border-white/15">
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Exercice custom</p>
+                    <h3 class="text-2xl font-extrabold text-white">Ajouter un mouvement</h3>
+                </div>
+                <button type="button" class="w-9 h-9 rounded-full bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" data-action="exercise-search#closeCreate" aria-label="Fermer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <input type="text" placeholder="Nom" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-exercise-search-target="name">
+                <input type="text" placeholder="Groupe musculaire" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-exercise-search-target="muscleGroup">
+                <input type="text" placeholder="Equipement" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-exercise-search-target="equipment">
+                <input type="url" placeholder="Image URL optionnelle" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-exercise-search-target="imageUrl">
+                <button type="button" class="w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="exercise-search#createCustom">
+                    Creer l'exercice
+                </button>
+            </div>
+        </div>
     </div>
 </section>

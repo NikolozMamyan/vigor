@@ -50,4 +50,17 @@ final class WorkoutSetRepository extends ServiceEntityRepository implements Work
             'position' => $position,
         ]);
     }
+
+    public function sumCompletedVolumeForProfile(UserProfile $profile): float
+    {
+        return (float) ($this->createQueryBuilder('workoutSet')
+            ->select('SUM(workoutSet.weight * workoutSet.reps)')
+            ->join('workoutSet.sessionExercise', 'sessionExercise')
+            ->join('sessionExercise.session', 'session')
+            ->andWhere('session.profile = :profile')
+            ->andWhere('workoutSet.completedAt IS NOT NULL')
+            ->setParameter('profile', $profile)
+            ->getQuery()
+            ->getSingleScalarResult() ?? 0);
+    }
 }

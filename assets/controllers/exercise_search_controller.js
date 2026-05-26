@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['input', 'results', 'empty'];
+    static targets = ['input', 'results', 'empty', 'modal', 'name', 'muscleGroup', 'equipment', 'imageUrl'];
 
     connect() {
         this.timeout = null;
@@ -16,6 +16,66 @@ export default class extends Controller {
     search() {
         window.clearTimeout(this.timeout);
         this.timeout = window.setTimeout(() => this.fetchResults(), 180);
+    }
+
+    openCreate() {
+        this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
+        this.modalTarget.classList.add('opacity-100');
+        document.body.classList.add('overflow-hidden');
+        window.setTimeout(() => this.nameTarget?.focus(), 80);
+    }
+
+    closeCreate() {
+        this.modalTarget.classList.add('opacity-0', 'pointer-events-none');
+        this.modalTarget.classList.remove('opacity-100');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    async createCustom(event) {
+        const button = event.currentTarget;
+        const payload = {
+            name: this.nameTarget.value.trim(),
+            muscleGroup: this.muscleGroupTarget.value.trim(),
+            equipment: this.equipmentTarget.value.trim(),
+            imageUrl: this.imageUrlTarget.value.trim(),
+        };
+
+        if (!payload.name || !payload.muscleGroup || !payload.equipment) {
+            this.markCreateInvalid(true);
+            return;
+        }
+
+        this.markCreateInvalid(false);
+        button.disabled = true;
+        button.classList.add('opacity-70');
+
+        try {
+            const response = await fetch('/api/exercises/custom', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                const exercise = await response.json();
+                this.resultsTarget.insertAdjacentHTML('afterbegin', this.card(exercise));
+                this.closeCreate();
+                this.clearCreateForm();
+
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+
+                return;
+            }
+        } catch {
+        }
+
+        button.disabled = false;
+        button.classList.remove('opacity-70');
     }
 
     async fetchResults() {
@@ -88,5 +148,18 @@ export default class extends Controller {
 
     escapeAttribute(value) {
         return this.escapeHtml(value);
+    }
+
+    markCreateInvalid(invalid) {
+        [this.nameTarget, this.muscleGroupTarget, this.equipmentTarget].forEach((input) => {
+            input.classList.toggle('border-rose-500/50', invalid && !input.value.trim());
+        });
+    }
+
+    clearCreateForm() {
+        this.nameTarget.value = '';
+        this.muscleGroupTarget.value = '';
+        this.equipmentTarget.value = '';
+        this.imageUrlTarget.value = '';
     }
 }

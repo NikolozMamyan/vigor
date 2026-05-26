@@ -13,6 +13,7 @@ class WorkoutSession
     public const TYPE_FREE = 'free';
     public const TYPE_PROGRAM = 'program';
 
+    public const STATUS_PLANNED = 'planned';
     public const STATUS_ACTIVE = 'active';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
@@ -25,6 +26,10 @@ class WorkoutSession
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private UserProfile $profile;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?WorkoutProgram $program = null;
 
     #[ORM\Column(length: 120)]
     private string $name = 'Seance libre';
@@ -61,6 +66,18 @@ class WorkoutSession
     public function getProfile(): UserProfile
     {
         return $this->profile;
+    }
+
+    public function getProgram(): ?WorkoutProgram
+    {
+        return $this->program;
+    }
+
+    public function setProgram(?WorkoutProgram $program): self
+    {
+        $this->program = $program;
+
+        return $this;
     }
 
     public function getName(): string

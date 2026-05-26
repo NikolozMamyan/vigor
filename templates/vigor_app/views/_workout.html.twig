@@ -67,7 +67,7 @@
         </button>
     </div>
     {% else %}
-        <div class="px-6 pt-4 space-y-5" data-controller="workout-programs">
+        <div class="px-6 pt-4 space-y-5" data-controller="workout-programs" data-workout-programs-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
             <div class="relative overflow-hidden glass-panel rounded-[2rem] p-6 min-h-[220px] flex flex-col justify-end">
                 <div class="absolute inset-0 bg-gradient-to-br from-app-accent/15 via-transparent to-cyan-400/10"></div>
                 <div class="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-app-accent/20 blur-[50px]"></div>
@@ -89,17 +89,35 @@
 
             <div class="space-y-3" data-workout-programs-target="list">
                 {% for program in activeWorkout.programs %}
-                    <article class="glass-panel rounded-2xl p-4 flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
-                            <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
+                    <article class="glass-panel rounded-2xl p-4 space-y-3" data-program-row-id="{{ program.id }}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                                <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-extrabold text-white truncate">{{ program.name }}</h4>
+                                <p class="text-[11px] text-app-muted">{{ program.description }} - {{ program.meta }}</p>
+                            </div>
+                            <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10" data-action="workout-programs#delete" data-program-id="{{ program.id }}" aria-label="Supprimer {{ program.name }}">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="{{ program.id }}" aria-label="Demarrer {{ program.name }}">
+                                <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                            </button>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="text-sm font-extrabold text-white truncate">{{ program.name }}</h4>
-                            <p class="text-[11px] text-app-muted">{{ program.description }} - {{ program.meta }}</p>
-                        </div>
-                        <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="{{ program.id }}" aria-label="Demarrer {{ program.name }}">
-                            <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
-                        </button>
+                        {% if program.exercises is defined and program.exercises %}
+                            <div class="space-y-2 border-t border-white/5 pt-3">
+                                {% for exercise in program.exercises %}
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-bold text-white truncate">{{ exercise.name }}</p>
+                                            <p class="text-[10px] text-app-muted uppercase font-bold tracking-wider">{{ exercise.muscleGroup }}</p>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-app-accent whitespace-nowrap">{{ exercise.target }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </article>
                 {% else %}
                     <div class="glass-panel rounded-2xl p-5 text-center border-dashed">
@@ -124,7 +142,7 @@
 
             <div class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
                 <div class="absolute inset-0 bg-black/70 backdrop-blur-xl" data-action="click->workout-programs#closeCreate"></div>
-                <div class="absolute left-1/2 bottom-6 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 glass-panel rounded-[2rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)] border-white/15">
+                <div class="absolute left-1/2 bottom-6 w-[calc(100%-2rem)] max-w-md max-h-[86vh] overflow-y-auto -translate-x-1/2 glass-panel rounded-[2rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)] border-white/15">
                     <div class="flex items-start justify-between gap-4 mb-5">
                         <div>
                             <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Nouveau programme</p>
@@ -136,6 +154,26 @@
                     </div>
                     <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest mb-2" for="program-name">Nom du programme</label>
                     <input id="program-name" type="text" value="Mon programme" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent mb-4" data-workout-programs-target="name">
+
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest" for="program-exercise-search">Exercices</label>
+                            <span class="text-[10px] text-app-muted font-bold" data-workout-programs-target="counter">0 selection</span>
+                        </div>
+                        <div class="relative mb-3">
+                            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
+                            <input id="program-exercise-search" type="search" placeholder="Chercher dans la bibliotheque" class="w-full glass-panel rounded-2xl pl-11 pr-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
+                        </div>
+                        <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1" data-workout-programs-target="exerciseOptions"></div>
+                    </div>
+
+                    <div class="space-y-3 mb-4" data-workout-programs-target="selectedList">
+                        <div class="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-center" data-workout-programs-target="emptySelection">
+                            <p class="text-xs font-bold text-white mb-1">Aucun exercice selectionne</p>
+                            <p class="text-[10px] text-app-muted">Choisis des exercices puis regle poids, series et reps.</p>
+                        </div>
+                    </div>
+
                     <button type="button" class="w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="workout-programs#create">
                         Creer le programme
                     </button>

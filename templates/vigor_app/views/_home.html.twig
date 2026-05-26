@@ -106,6 +106,32 @@
         </div>
     </div>
 
+    <div class="glass-panel rounded-3xl p-5 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="target" class="w-4 h-4 text-app-accent"></i>
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Objectifs hebdo</h3>
+            </div>
+            <span class="text-[10px] font-bold text-app-accent">{{ dashboard.weeklyGoal.volume.trendPercent >= 0 ? '+' }}{{ dashboard.weeklyGoal.volume.trendPercent }}%</span>
+        </div>
+
+        {% for goal in [
+            {label: 'Seances', current: dashboard.weeklyGoal.workouts.current, target: dashboard.weeklyGoal.workouts.target, percent: dashboard.weeklyGoal.workouts.percent},
+            {label: 'Volume', current: (dashboard.weeklyGoal.volume.current / 1000)|number_format(1, '.', ''), target: (dashboard.weeklyGoal.volume.target / 1000)|number_format(1, '.', ''), percent: dashboard.weeklyGoal.volume.percent},
+            {label: 'Minutes', current: dashboard.weeklyGoal.trainingMinutes.current, target: dashboard.weeklyGoal.trainingMinutes.target, percent: dashboard.weeklyGoal.trainingMinutes.percent}
+        ] %}
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[11px] text-app-muted font-bold uppercase tracking-wider">{{ goal.label }}</span>
+                    <span class="text-[11px] text-white font-bold tabular-nums">{{ goal.current }}/{{ goal.target }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-app-accent" style="width: {{ goal.percent }}%"></div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
     <div class="relative group mt-6">
         {% if dashboard.cta.active %}
             <div class="absolute -inset-0.5 bg-gradient-to-r from-app-accent to-emerald-500 rounded-[2rem] blur opacity-30 group-hover:opacity-60 transition duration-500 pulse-glow"></div>
@@ -146,6 +172,17 @@
                     </span>
                 </button>
 
+                {% for program in activeWorkout.programs|default([]) %}
+                    <button type="button" class="w-full rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center gap-4 text-left hover:bg-white/10 transition-colors" data-workout-start-target="programButton" data-program-id="{{ program.id }}" data-action="workout-start#startProgram">
+                        <span class="w-11 h-11 rounded-2xl bg-white/5 flex items-center justify-center">
+                            <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
+                        </span>
+                        <span class="flex-1">
+                            <span class="block text-sm font-extrabold text-white">{{ program.name }}</span>
+                            <span class="block text-[11px] font-semibold text-app-muted">{{ program.meta }}</span>
+                        </span>
+                    </button>
+                {% else %}
                 <button type="button" class="w-full rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center gap-4 text-left opacity-55 cursor-not-allowed" disabled>
                     <span class="w-11 h-11 rounded-2xl bg-white/5 flex items-center justify-center">
                         <i data-lucide="calendar-days" class="w-5 h-5 text-app-muted"></i>
@@ -156,6 +193,7 @@
                     </span>
                     <span class="text-[10px] font-bold text-app-muted uppercase tracking-widest">Bientot</span>
                 </button>
+                {% endfor %}
             </div>
         </div>
     </div>

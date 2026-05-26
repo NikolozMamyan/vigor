@@ -7,6 +7,7 @@ use App\Entity\UserProfile;
 use App\Entity\WorkoutProgram;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
+use App\Entity\WorkoutSet;
 use App\Repository\WorkoutProgramExerciseReaderInterface;
 use App\Repository\WorkoutSessionReaderInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -63,6 +64,7 @@ final class WorkoutSessionService
 
         $session = (new WorkoutSession($profile))
             ->setName($program->getName())
+            ->setProgram($program)
             ->setType(WorkoutSession::TYPE_PROGRAM);
 
         $this->entityManager->persist($session);
@@ -76,6 +78,15 @@ final class WorkoutSessionService
                 ->setRestSeconds($programExercise->getRestSeconds());
 
             $this->entityManager->persist($sessionExercise);
+
+            for ($position = 1; $position <= $programExercise->getTargetSets(); ++$position) {
+                $set = (new WorkoutSet($sessionExercise))
+                    ->setPosition($position)
+                    ->setWeight($programExercise->getTargetWeight() ?? 0.0)
+                    ->setReps($programExercise->getTargetRepsMin());
+
+                $this->entityManager->persist($set);
+            }
         }
 
         $this->entityManager->flush();

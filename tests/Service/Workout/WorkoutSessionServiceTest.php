@@ -123,13 +123,14 @@ final class WorkoutSessionServiceTest extends TestCase
         $programExerciseRepository->method('findForProgram')->willReturn([$programExercise]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::exactly(2))->method('persist');
+        $entityManager->expects(self::exactly(6))->method('persist');
         $entityManager->expects(self::once())->method('flush');
 
         $result = $this->createService($entityManager, $sessionRepository, $programExerciseRepository)->startProgram($program);
 
         self::assertSame(WorkoutSession::TYPE_PROGRAM, $result->getType());
         self::assertSame('Push', $result->getName());
+        self::assertSame($program, $result->getProgram());
     }
 
     private function createService(
