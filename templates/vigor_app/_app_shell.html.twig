@@ -1,0 +1,22 @@
+<div
+    class="app-container w-full max-w-md bg-app-bg relative flex flex-col overflow-hidden sm:border sm:border-white/10 sm:rounded-[2.5rem] sm:my-4 sm:shadow-2xl"
+    data-controller="vigor-navigation rest-timer lucide-icons"
+    data-vigor-navigation-active-value="{{ activeView }}"
+>
+    <div class="ambient-bg">
+        <div class="ambient-blob-1"></div>
+        <div class="ambient-blob-2"></div>
+    </div>
+
+    {% include 'vigor_app/_header.html.twig' %}
+
+    <main class="app-main flex-1 overflow-y-auto no-scrollbar relative z-20">
+        {% include 'vigor_app/views/_home.html.twig' %}
+        {% include 'vigor_app/views/_workout.html.twig' %}
+        {% include 'vigor_app/views/_library.html.twig' %}
+        {% include 'vigor_app/views/_profile.html.twig' %}
+    </main>
+
+    {% include 'vigor_app/_rest_timer.html.twig' %}
+    {% include 'vigor_app/_bottom_nav.html.twig' %}
+</div>

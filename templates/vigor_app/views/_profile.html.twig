@@ -1,0 +1,84 @@
+<section id="view-profile" class="tab-content {{ activeView == 'profile' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="profile">
+    <div class="relative pt-4">
+        <div class="glass-panel rounded-[2rem] p-6 text-center relative overflow-hidden">
+            <div class="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-app-accent/20 blur-[60px] rounded-full pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col items-center">
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 bg-app-accent rounded-full blur-md opacity-40"></div>
+                    <div class="w-24 h-24 rounded-full border-2 border-app-accent overflow-hidden relative z-10">
+                        <img src="https://placehold.co/200x200/18181b/ccff00?text=AX" alt="Avatar" class="w-full h-full object-cover">
+                    </div>
+                    <button type="button" class="absolute bottom-0 right-0 w-8 h-8 bg-app-accent text-black rounded-full flex items-center justify-center z-20 shadow-neon hover:scale-110 transition-transform" aria-label="Modifier l'avatar">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <h2 class="text-2xl font-extrabold text-white mb-1">Alex</h2>
+                <p class="text-sm text-app-muted mb-4">@alexvigor - Membre depuis Jan 2025</p>
+
+                <div class="flex items-center gap-2 bg-app-accent/10 border border-app-accent/30 rounded-full px-4 py-1.5">
+                    <i data-lucide="award" class="w-4 h-4 text-app-accent"></i>
+                    <span class="text-xs font-bold text-app-accent uppercase tracking-wider">Niveau 12 - Avance</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        {% for stat in profileStats %}
+            <div class="glass-panel rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="{{ stat.icon }}" class="w-4 h-4 text-app-accent"></i>
+                    <p class="text-[10px] text-app-muted uppercase font-bold tracking-wider">{{ stat.label }}</p>
+                </div>
+                <p class="text-2xl font-extrabold text-white tabular-nums">
+                    {{ stat.value }}{% if stat.suffix|default(false) %}<span class="text-sm text-app-muted ml-1">{{ stat.suffix }}</span>{% endif %}
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="glass-panel rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Badges</h3>
+            <span class="text-[10px] text-app-muted font-bold">5/12</span>
+        </div>
+        <div class="grid grid-cols-4 gap-3">
+            {% for badge in badges %}
+                <button type="button" class="badge-item {{ badge.locked ? 'badge-locked' }} flex flex-col items-center gap-1.5 cursor-pointer">
+                    <span class="w-12 h-12 rounded-2xl {{ badge.locked ? 'bg-white/5 border-white/10' : 'bg-app-accent/10 border-app-accent/30 shadow-neon' }} border flex items-center justify-center">
+                        <i data-lucide="{{ badge.icon }}" class="{{ badge.locked ? 'w-5 h-5 text-app-muted' : 'w-6 h-6 text-app-accent' }}"></i>
+                    </span>
+                    <span class="text-[9px] font-bold {{ badge.locked ? 'text-app-muted' : 'text-white' }} text-center leading-tight">{{ badge.label }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="glass-panel rounded-2xl overflow-hidden">
+        {% for item in profileSettings %}
+            <button type="button" class="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5">
+                <span class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <i data-lucide="{{ item.icon }}" class="w-5 h-5 text-white"></i>
+                </span>
+                <span class="text-left flex-1">
+                    <span class="block text-sm font-bold text-white">{{ item.label }}</span>
+                    <span class="block text-[10px] text-app-muted">{{ item.description }}</span>
+                </span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-app-muted"></i>
+            </button>
+        {% endfor %}
+
+        <button type="button" class="w-full flex items-center gap-4 p-4 hover:bg-rose-500/5 transition-colors group">
+            <span class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                <i data-lucide="log-out" class="w-5 h-5 text-rose-500"></i>
+            </span>
+            <span class="text-left flex-1">
+                <span class="block text-sm font-bold text-rose-500">Deconnexion</span>
+            </span>
+        </button>
+    </div>
+
+    <p class="text-center text-[10px] text-app-muted/50 pt-4">VIGOR v1.0.0 - Made with energie</p>
+</section>

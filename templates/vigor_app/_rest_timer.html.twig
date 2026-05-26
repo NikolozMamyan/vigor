@@ -1,0 +1,26 @@
+<div
+    class="app-rest-timer fixed left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] glass-panel rounded-[2rem] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.8)] z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-500 flex items-center justify-between border-white/20"
+    data-rest-timer-target="modal"
+>
+    <div class="flex items-center gap-3 pl-2">
+        <div class="relative w-12 h-12 flex items-center justify-center">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path class="text-white/10" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path data-rest-timer-target="circle" class="text-app-accent transition-all duration-1000 drop-shadow-[0_0_5px_rgba(204,255,0,0.8)]" stroke-width="3" stroke-dasharray="100, 100" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-linecap="round" />
+            </svg>
+            <i data-lucide="coffee" class="absolute w-4 h-4 text-white"></i>
+        </div>
+        <div>
+            <p class="text-xs font-bold text-app-muted uppercase tracking-wider mb-0.5">Repos</p>
+            <p class="text-2xl font-extrabold text-white tabular-nums leading-none" data-rest-timer-target="display">01:30</p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-1.5 pr-1">
+        <button type="button" class="h-10 px-3 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-xs font-bold text-white transition-colors border border-white/5" data-action="rest-timer#addTime">+15s</button>
+        <div class="w-px h-6 bg-white/10 mx-1"></div>
+        <button type="button" class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all border border-rose-500/20" data-action="rest-timer#close">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </div>
+</div>

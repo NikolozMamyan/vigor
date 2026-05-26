@@ -102,6 +102,7 @@
         "symfony/debug-bundle": "7.2.*",
         "symfony/maker-bundle": "^1.0",
         "symfony/stopwatch": "7.2.*",
-        "symfony/web-profiler-bundle": "7.2.*"
+        "symfony/web-profiler-bundle": "7.2.*",
+        "symfonycasts/tailwind-bundle": "^0.12.0"
     }
 }

@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}VIGOR - App{% endblock %}
+{% block body_class %}vigor-page flex justify-center items-center bg-zinc-950{% endblock %}
+
+{% block stylesheets %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+{% endblock %}
+
+{% block body %}
+    {% include 'vigor_app/_app_shell.html.twig' %}
+{% endblock %}

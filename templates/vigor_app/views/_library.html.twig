@@ -1,0 +1,50 @@
+<section id="view-library" class="tab-content {{ activeView == 'library' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="library">
+    <div class="pt-2">
+        <h2 class="text-3xl font-extrabold mb-4">Mouvements</h2>
+        <div class="relative group">
+            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <i data-lucide="search" class="w-5 h-5 text-app-muted group-focus-within:text-white transition-colors"></i>
+            </div>
+            <input type="search" placeholder="Rechercher par muscle, nom..." class="w-full glass-panel text-white pl-12 pr-12 py-4 rounded-2xl focus:outline-none focus:border-app-accent focus:shadow-neon transition-all text-sm font-medium placeholder-app-muted">
+            <div class="absolute inset-y-0 right-2 flex items-center">
+                <button type="button" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors" aria-label="Filtres">
+                    <i data-lucide="sliders-horizontal" class="w-4 h-4 text-white"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-6 px-6" data-swipe-ignore>
+        {% for category in [
+            {label: 'Populaires', icon: 'flame', active: true},
+            {label: 'Pecs', icon: 'target', active: false},
+            {label: 'Dos', icon: 'shield', active: false},
+            {label: 'Bras', icon: 'dumbbell', active: false}
+        ] %}
+            <button type="button" class="flex flex-col items-center gap-2 cursor-pointer group min-w-[70px]">
+                <span class="w-16 h-16 rounded-full glass-panel {{ category.active ? 'border-app-accent shadow-neon' : 'border-white/10' }} flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <i data-lucide="{{ category.icon }}" class="w-6 h-6 {{ category.active ? 'text-app-accent' : 'text-white/80' }}"></i>
+                </span>
+                <span class="text-[10px] font-bold {{ category.active ? 'text-white' : 'text-app-muted' }}">{{ category.label }}</span>
+            </button>
+        {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        {% for exercise in exercises %}
+            <article class="glass-panel rounded-[1.5rem] overflow-hidden group cursor-pointer hover:border-app-accent/50 transition-colors p-1">
+                <div class="h-32 rounded-t-[1.2rem] rounded-b-xl bg-zinc-900 relative overflow-hidden">
+                    <img src="{{ exercise.image }}" alt="{{ exercise.name }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-110">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                    <div class="absolute bottom-2 left-3">
+                        <span class="bg-white/20 backdrop-blur-md text-[9px] font-bold text-white px-2 py-0.5 rounded uppercase">{{ exercise.tag }}</span>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <h4 class="font-extrabold text-sm text-white mb-0.5">{{ exercise.name }}</h4>
+                    <p class="text-[10px] text-app-muted uppercase font-semibold">{{ exercise.category }}</p>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</section>

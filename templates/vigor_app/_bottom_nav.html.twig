@@ -1,0 +1,28 @@
+<nav class="app-bottom-nav absolute left-1/2 -translate-x-1/2 w-[85%] max-w-[320px] glass-panel rounded-full z-40 shadow-2xl border border-white/20 backdrop-blur-3xl" aria-label="Navigation principale">
+    <div class="flex justify-between items-center px-2 py-2 relative">
+        <div
+            class="absolute h-12 w-16 bg-white/10 rounded-full transition-all duration-500 z-0"
+            data-vigor-navigation-target="indicator"
+            style="left: 8px;"
+        ></div>
+
+        {% for item in navItems %}
+            <button
+                type="button"
+                class="nav-btn {{ activeView == item.id ? 'active' }} relative w-16 h-12 rounded-full flex items-center justify-center z-10 transition-colors group"
+                data-vigor-navigation-target="button"
+                data-vigor-navigation-view-param="{{ item.id }}"
+                data-action="vigor-navigation#navigate"
+                aria-label="{{ item.label }}"
+            >
+                {% if item.id == 'workout' %}
+                    <span class="absolute inset-0 bg-app-accent/20 rounded-full scale-50 opacity-0 group-[.active]:scale-100 group-[.active]:opacity-100 transition-all duration-500 blur-sm"></span>
+                {% endif %}
+                <i
+                    data-lucide="{{ item.icon }}"
+                    class="nav-icon w-5 h-5 {{ activeView == item.id ? (item.id == 'workout' ? 'text-app-accent fill-app-accent' : 'text-white') : 'text-app-muted' }} transition-colors duration-300 relative z-10"
+                ></i>
+            </button>
+        {% endfor %}
+    </div>
+</nav>
