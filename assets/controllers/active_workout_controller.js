@@ -1,11 +1,16 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['sets'];
+    static targets = ['sets', 'exerciseModal', 'exerciseSearch', 'exerciseOptions'];
     static values = {
         sessionId: Number,
         sessionExerciseId: Number,
+        exercises: Array,
     };
+
+    connect() {
+        this.renderExerciseOptions();
+    }
 
     addSet() {
         const nextPosition = this.nextPosition();
@@ -67,6 +72,94 @@ export default class extends Controller {
         await this.updateSession(event.currentTarget, 'cancel');
     }
 
+    openExerciseModal() {
+        this.exerciseModalTarget.classList.remove('opacity-0', 'pointer-events-none');
+        this.exerciseModalTarget.classList.add('opacity-100');
+        document.body.classList.add('overflow-hidden');
+        this.renderExerciseOptions();
+        window.setTimeout(() => this.exerciseSearchTarget?.focus(), 80);
+    }
+
+    closeExerciseModal() {
+        this.exerciseModalTarget.classList.add('opacity-0', 'pointer-events-none');
+        this.exerciseModalTarget.classList.remove('opacity-100');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    renderExerciseOptions() {
+        if (!this.hasExerciseOptionsTarget) {
+            return;
+        }
+
+        const query = this.hasExerciseSearchTarget ? this.exerciseSearchTarget.value.trim().toLowerCase() : '';
+        const exercises = this.exercisesValue
+            .filter((exercise) => Number.isFinite(exercise.id))
+            .filter((exercise) => {
+                if (!query) {
+                    return true;
+                }
+
+                return `${exercise.name} ${exercise.category} ${exercise.tag}`.toLowerCase().includes(query);
+            })
+            .slice(0, 30);
+
+        this.exerciseOptionsTarget.innerHTML = exercises.map((exercise) => this.exerciseOption(exercise)).join('');
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    exerciseOption(exercise) {
+        return `
+            <button type="button" class="w-full rounded-2xl bg-white/[0.06] border border-white/10 p-3 flex items-center gap-3 text-left hover:border-app-accent/50 hover:bg-white/10 transition-colors" data-action="active-workout#addExercise" data-exercise-id="${exercise.id}">
+                <span class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                    <i data-lucide="dumbbell" class="w-5 h-5 text-app-accent"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-extrabold text-white truncate">${this.escapeHtml(exercise.name)}</span>
+                    <span class="block text-[10px] text-app-muted uppercase font-bold tracking-wider">${this.escapeHtml(exercise.category)} - ${this.escapeHtml(exercise.tag)}</span>
+                </span>
+                <span class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-white">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </span>
+            </button>
+        `;
+    }
+
+    async addExercise(event) {
+        const button = event.currentTarget;
+        const exerciseId = Number.parseInt(button.dataset.exerciseId, 10);
+
+        if (!this.hasSessionIdValue || this.sessionIdValue <= 0 || !Number.isFinite(exerciseId)) {
+            return;
+        }
+
+        button.disabled = true;
+        button.classList.add('opacity-70');
+
+        try {
+            const response = await fetch(`/api/workout-sessions/${this.sessionIdValue}/exercises`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ exerciseId }),
+            });
+
+            if (response.ok) {
+                const sessionExercise = await response.json();
+                window.location.href = `/app/workout?exercise=${sessionExercise.id}`;
+                return;
+            }
+        } catch {
+        }
+
+        button.disabled = false;
+        button.classList.remove('opacity-70');
+    }
+
     async updateSession(button, action) {
         if (!this.hasSessionIdValue || this.sessionIdValue <= 0) {
             return;
@@ -90,5 +183,14 @@ export default class extends Controller {
 
         button.disabled = false;
         button.classList.remove('opacity-60');
+    }
+
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
     }
 }

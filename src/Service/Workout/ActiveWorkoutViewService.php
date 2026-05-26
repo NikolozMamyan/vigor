@@ -25,7 +25,7 @@ final class ActiveWorkoutViewService
     /**
      * @return array<string, mixed>
      */
-    public function build(): array
+    public function build(?int $preferredSessionExerciseId = null): array
     {
         try {
             $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
@@ -41,7 +41,7 @@ final class ActiveWorkoutViewService
             }
 
             $sessionExercises = $this->sessionExerciseRepository->findForSession($session);
-            $currentSessionExercise = $sessionExercises[0] ?? null;
+            $currentSessionExercise = $this->resolveCurrentSessionExercise($sessionExercises, $preferredSessionExerciseId);
 
             if (!$currentSessionExercise) {
                 return $this->fallback();
@@ -56,8 +56,16 @@ final class ActiveWorkoutViewService
                 'sessionExerciseId' => $currentSessionExercise->getId(),
                 'sessionName' => $session->getName(),
                 'statusLabel' => 'En cours',
+                'headerTitle' => $session->getName(),
+                'headerSubtitle' => $exercise->getName().' - '.$exercise->getMuscleGroup(),
                 'exercisePosition' => $currentSessionExercise->getPosition(),
                 'exerciseCount' => max(1, count($sessionExercises)),
+                'exerciseList' => array_map(fn ($sessionExercise): array => [
+                    'id' => $sessionExercise->getId(),
+                    'name' => $sessionExercise->getExercise()->getName(),
+                    'muscleGroup' => $sessionExercise->getExercise()->getMuscleGroup(),
+                    'active' => $sessionExercise->getId() === $currentSessionExercise->getId(),
+                ], $sessionExercises),
                 'equipment' => $exercise->getEquipment(),
                 'title' => $exercise->getName(),
                 'titleLines' => $this->splitTitle($exercise->getName()),
@@ -104,6 +112,22 @@ final class ActiveWorkoutViewService
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param list<\App\Entity\WorkoutSessionExercise> $sessionExercises
+     */
+    private function resolveCurrentSessionExercise(array $sessionExercises, ?int $preferredSessionExerciseId): ?\App\Entity\WorkoutSessionExercise
+    {
+        if ($preferredSessionExerciseId) {
+            foreach ($sessionExercises as $sessionExercise) {
+                if ($sessionExercise->getId() === $preferredSessionExerciseId) {
+                    return $sessionExercise;
+                }
+            }
+        }
+
+        return $sessionExercises[0] ?? null;
     }
 
     private function setLabel(WorkoutSet $set): string
@@ -221,8 +245,13 @@ final class ActiveWorkoutViewService
             'sessionExerciseId' => null,
             'sessionName' => 'Seance libre',
             'statusLabel' => 'En cours',
+            'headerTitle' => 'Seance libre',
+            'headerSubtitle' => 'Developpe Couche - Pectoraux',
             'exercisePosition' => 1,
             'exerciseCount' => 1,
+            'exerciseList' => [
+                ['id' => null, 'name' => 'Developpe Couche', 'muscleGroup' => 'Pectoraux', 'active' => true],
+            ],
             'equipment' => 'Barre Olympique',
             'title' => 'Developpe Couche',
             'titleLines' => ['Developpe', 'Couche'],

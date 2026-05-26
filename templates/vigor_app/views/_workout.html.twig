@@ -11,14 +11,29 @@
         </div>
         <div class="absolute bottom-4 left-6 right-6">
             <span class="text-app-accent text-[10px] font-bold uppercase tracking-widest mb-2 block">Exercice {{ activeWorkout.exercisePosition }}/{{ activeWorkout.exerciseCount }} - {{ activeWorkout.equipment }}</span>
-            <h2 class="text-4xl font-extrabold text-white leading-tight drop-shadow-lg">{{ activeWorkout.titleLines[0] }}{% if activeWorkout.titleLines[1] %} <br>{{ activeWorkout.titleLines[1] }}{% endif %}</h2>
+            <h2 class="text-4xl font-extrabold text-white leading-tight drop-shadow-lg">{{ activeWorkout.headerTitle|default(activeWorkout.sessionName|default('Seance libre')) }}</h2>
+            <p class="mt-2 text-sm font-semibold text-white/80">{{ activeWorkout.headerSubtitle|default(activeWorkout.title) }}</p>
         </div>
     </div>
 
-    <div class="px-6 space-y-4" data-controller="active-workout" data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}" data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}">
+    <div class="px-6 space-y-4" data-controller="active-workout" data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}" data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}" data-active-workout-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
+        <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6" data-swipe-ignore>
+            {% for item in activeWorkout.exerciseList|default([]) %}
+                <a href="/app/workout?exercise={{ item.id }}" class="shrink-0 rounded-2xl px-4 py-3 text-left border {{ item.active ? 'bg-app-accent text-black border-app-accent' : 'glass-panel text-white border-white/10' }}">
+                    <span class="block text-xs font-extrabold">{{ item.name }}</span>
+                    <span class="block text-[9px] font-bold uppercase tracking-wider {{ item.active ? 'text-black/60' : 'text-app-muted' }}">{{ item.muscleGroup }}</span>
+                </a>
+            {% endfor %}
+            <button type="button" class="shrink-0 w-12 h-12 rounded-2xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-app-muted hover:text-white hover:bg-white/10" data-action="active-workout#openExerciseModal" aria-label="Ajouter un exercice">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </div>
+
         <div class="flex justify-between items-end mb-2">
             <h3 class="text-sm font-semibold text-app-muted uppercase tracking-wider">Objectif : {{ activeWorkout.targetLabel }}</h3>
-            <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1 rounded-full">Historique</button>
+            <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1 rounded-full flex items-center gap-1.5" data-action="active-workout#openExerciseModal">
+                <i data-lucide="plus" class="w-3 h-3"></i> Exercice
+            </button>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -65,6 +80,27 @@
         <button type="button" class="w-full py-4 text-xs font-bold text-app-muted hover:text-white border border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-2 transition-colors mt-2 bg-white/5 hover:bg-white/10" data-action="active-workout#addSet">
             <i data-lucide="plus" class="w-4 h-4"></i> AJOUTER UNE SERIE
         </button>
+
+        <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" data-active-workout-target="exerciseModal">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" data-action="click->active-workout#closeExerciseModal"></div>
+            <div class="absolute left-0 right-0 bottom-0 mx-auto max-w-md rounded-t-[2rem] bg-[#0b0b0d]/95 border border-white/10 shadow-[0_-24px_80px_rgba(0,0,0,0.85)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20"></div>
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Seance libre</p>
+                        <h3 class="text-2xl font-extrabold text-white">Ajouter un exercice</h3>
+                    </div>
+                    <button type="button" class="w-10 h-10 rounded-full bg-white/5 text-app-muted hover:text-white flex items-center justify-center" data-action="active-workout#closeExerciseModal" aria-label="Fermer">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="relative mb-3">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
+                    <input type="search" placeholder="Chercher dans la bibliotheque" class="w-full rounded-2xl bg-white/[0.06] border border-white/10 pl-11 pr-4 py-4 text-sm font-bold text-white focus:outline-none focus:border-app-accent" data-active-workout-target="exerciseSearch" data-action="input->active-workout#renderExerciseOptions">
+                </div>
+                <div class="max-h-[48vh] overflow-y-auto space-y-2 pr-1" data-active-workout-target="exerciseOptions"></div>
+            </div>
+        </div>
     </div>
     {% else %}
         <div class="px-6 pt-4 space-y-5" data-controller="workout-programs" data-workout-programs-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
@@ -140,43 +176,60 @@
                 </span>
             </button>
 
-            <div class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
-                <div class="absolute inset-0 bg-black/70 backdrop-blur-xl" data-action="click->workout-programs#closeCreate"></div>
-                <div class="absolute left-1/2 bottom-6 w-[calc(100%-2rem)] max-w-md max-h-[86vh] overflow-y-auto -translate-x-1/2 glass-panel rounded-[2rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)] border-white/15">
-                    <div class="flex items-start justify-between gap-4 mb-5">
-                        <div>
-                            <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Nouveau programme</p>
-                            <h3 class="text-2xl font-extrabold text-white">Cree ta base</h3>
+            <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
+                <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" data-action="click->workout-programs#closeCreate"></div>
+                <div class="absolute left-0 right-0 bottom-0 mx-auto max-w-md max-h-[92vh] overflow-hidden rounded-t-[2rem] bg-[#0b0b0d]/95 border border-white/10 shadow-[0_-24px_80px_rgba(0,0,0,0.85)]">
+                    <div class="sticky top-0 z-10 bg-[#0b0b0d]/95 backdrop-blur-2xl px-5 pt-3 pb-4 border-b border-white/5">
+                        <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20"></div>
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Nouveau programme</p>
+                                <h3 class="text-2xl font-extrabold text-white">Construire ta seance</h3>
+                            </div>
+                            <button type="button" class="w-10 h-10 rounded-full bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
                         </div>
-                        <button type="button" class="w-9 h-9 rounded-full bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
-                            <i data-lucide="x" class="w-4 h-4"></i>
+                    </div>
+
+                    <div class="overflow-y-auto max-h-[calc(92vh-6rem)] px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
+                            <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest mb-2" for="program-name">Nom du programme</label>
+                            <input id="program-name" type="text" value="Mon programme" class="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="name">
+                        </div>
+
+                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <p class="text-[10px] text-app-muted font-bold uppercase tracking-widest">Bibliotheque</p>
+                                    <p class="text-sm font-extrabold text-white">Choisis tes exercices</p>
+                                </div>
+                                <span class="rounded-full bg-app-accent/10 border border-app-accent/20 px-3 py-1 text-[10px] text-app-accent font-bold" data-workout-programs-target="counter">0 selection</span>
+                            </div>
+                            <div class="relative mb-3">
+                                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
+                                <input id="program-exercise-search" type="search" placeholder="Chercher un exercice" class="w-full rounded-2xl bg-black/20 border border-white/10 pl-11 pr-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
+                            </div>
+                            <div class="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1" data-workout-programs-target="exerciseOptions"></div>
+                        </div>
+
+                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
+                            <div class="mb-3">
+                                <p class="text-[10px] text-app-muted font-bold uppercase tracking-widest">Objectifs</p>
+                                <p class="text-sm font-extrabold text-white">Poids, series et reps</p>
+                            </div>
+                            <div class="space-y-3" data-workout-programs-target="selectedList">
+                                <div class="rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 text-center" data-workout-programs-target="emptySelection">
+                                    <p class="text-xs font-bold text-white mb-1">Aucun exercice selectionne</p>
+                                    <p class="text-[10px] text-app-muted">Ajoute un exercice depuis la bibliotheque au-dessus.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="sticky bottom-0 w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="workout-programs#create">
+                            Creer le programme
                         </button>
                     </div>
-                    <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest mb-2" for="program-name">Nom du programme</label>
-                    <input id="program-name" type="text" value="Mon programme" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent mb-4" data-workout-programs-target="name">
-
-                    <div class="mb-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest" for="program-exercise-search">Exercices</label>
-                            <span class="text-[10px] text-app-muted font-bold" data-workout-programs-target="counter">0 selection</span>
-                        </div>
-                        <div class="relative mb-3">
-                            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
-                            <input id="program-exercise-search" type="search" placeholder="Chercher dans la bibliotheque" class="w-full glass-panel rounded-2xl pl-11 pr-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
-                        </div>
-                        <div class="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1" data-workout-programs-target="exerciseOptions"></div>
-                    </div>
-
-                    <div class="space-y-3 mb-4" data-workout-programs-target="selectedList">
-                        <div class="rounded-2xl border border-dashed border-white/15 bg-white/5 p-4 text-center" data-workout-programs-target="emptySelection">
-                            <p class="text-xs font-bold text-white mb-1">Aucun exercice selectionne</p>
-                            <p class="text-[10px] text-app-muted">Choisis des exercices puis regle poids, series et reps.</p>
-                        </div>
-                    </div>
-
-                    <button type="button" class="w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="workout-programs#create">
-                        Creer le programme
-                    </button>
                 </div>
             </div>
         </div>

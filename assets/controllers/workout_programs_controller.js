@@ -190,8 +190,8 @@ export default class extends Controller {
         const selected = this.selectedExercises.has(exercise.id);
 
         return `
-            <button type="button" class="w-full rounded-2xl ${selected ? 'bg-app-accent text-black border-app-accent' : 'bg-white/5 text-white border-white/10'} border p-3 flex items-center gap-3 text-left transition-colors" data-action="workout-programs#toggleExercise" data-exercise-id="${exercise.id}">
-                <span class="w-10 h-10 rounded-xl ${selected ? 'bg-black/10' : 'bg-white/5'} flex items-center justify-center">
+            <button type="button" class="w-full rounded-2xl ${selected ? 'bg-app-accent text-black border-app-accent shadow-neon' : 'bg-black/20 text-white border-white/10'} border p-3 flex items-center gap-3 text-left transition-colors" data-action="workout-programs#toggleExercise" data-exercise-id="${exercise.id}">
+                <span class="w-10 h-10 rounded-xl ${selected ? 'bg-black/10' : 'bg-white/[0.06] border border-white/10'} flex items-center justify-center">
                     <i data-lucide="${selected ? 'check' : 'plus'}" class="w-4 h-4"></i>
                 </span>
                 <span class="min-w-0 flex-1">
@@ -223,7 +223,7 @@ export default class extends Controller {
         const exercise = item.exercise;
 
         return `
-            <div class="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3" data-selected-exercise-id="${exercise.id}">
+            <div class="rounded-3xl bg-black/20 border border-white/10 p-4 space-y-4" data-selected-exercise-id="${exercise.id}">
                 <div class="flex items-start gap-3">
                     <span class="w-10 h-10 rounded-xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
                         <i data-lucide="dumbbell" class="w-4 h-4 text-app-accent"></i>
@@ -244,7 +244,7 @@ export default class extends Controller {
                 </div>
                 <label class="block">
                     <span class="block text-[9px] text-app-muted uppercase font-bold tracking-wider mb-1">Repos secondes</span>
-                    <input type="number" min="1" value="${item.restSeconds}" class="w-full rounded-xl bg-black/20 border border-white/10 px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-app-accent" data-field="restSeconds" data-action="input->workout-programs#updateSelected">
+                    <input type="number" min="1" value="${item.restSeconds}" class="w-full rounded-2xl bg-white/[0.06] border border-white/10 px-3 py-3 text-sm font-bold text-white focus:outline-none focus:border-app-accent" data-field="restSeconds" data-action="input->workout-programs#updateSelected">
                 </label>
             </div>
         `;
@@ -254,7 +254,7 @@ export default class extends Controller {
         return `
             <label class="block">
                 <span class="block text-[9px] text-app-muted uppercase font-bold tracking-wider mb-1">${label}</span>
-                <input type="number" min="0" value="${this.escapeAttribute(value)}" placeholder="${placeholder}" class="w-full rounded-xl bg-black/20 border border-white/10 px-2 py-2 text-sm font-bold text-white text-center focus:outline-none focus:border-app-accent" data-field="${field}" data-action="input->workout-programs#updateSelected">
+                <input type="number" min="0" value="${this.escapeAttribute(value)}" placeholder="${placeholder}" class="w-full rounded-2xl bg-white/[0.06] border border-white/10 px-2 py-3 text-sm font-bold text-white text-center focus:outline-none focus:border-app-accent" data-field="${field}" data-action="input->workout-programs#updateSelected">
             </label>
         `;
     }

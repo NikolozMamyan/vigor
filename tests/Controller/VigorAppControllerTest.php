@@ -23,6 +23,6 @@ final class VigorAppControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('#view-workout.active');
-        self::assertSelectorTextContains('#view-workout h2', 'Developpe');
+        self::assertSelectorTextContains('#view-workout h2', 'Seance libre');
     }
 }

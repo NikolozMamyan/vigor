@@ -8,6 +8,7 @@ use App\Repository\UserProfileRepository;
 use App\Service\Workout\WorkoutSessionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class WorkoutSessionController extends AbstractController
@@ -55,6 +56,36 @@ final class WorkoutSessionController extends AbstractController
 
             return $this->json($this->normalizeSession($session));
         } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    #[Route('/api/workout-sessions/{id}/exercises', name: 'api_workout_sessions_add_exercise', methods: ['POST'])]
+    public function addExercise(
+        WorkoutSession $session,
+        Request $request,
+        ExerciseRepository $exerciseRepository,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse {
+        try {
+            $payload = json_decode($request->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+            $exercise = $exerciseRepository->find((int) ($payload['exerciseId'] ?? 0));
+
+            if (!$exercise) {
+                return $this->json(['error' => 'Exercise not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            $sessionExercise = $sessionService->addExercise($session, $exercise);
+
+            return $this->json([
+                'id' => $sessionExercise->getId(),
+                'sessionId' => $session->getId(),
+                'exerciseId' => $exercise->getId(),
+                'exerciseName' => $exercise->getName(),
+                'muscleGroup' => $exercise->getMuscleGroup(),
+                'position' => $sessionExercise->getPosition(),
+            ], JsonResponse::HTTP_CREATED);
+        } catch (\InvalidArgumentException|\JsonException $exception) {
             return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
     }

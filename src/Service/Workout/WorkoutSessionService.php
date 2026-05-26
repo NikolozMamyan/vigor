@@ -10,6 +10,7 @@ use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
 use App\Repository\WorkoutProgramExerciseReaderInterface;
 use App\Repository\WorkoutSessionReaderInterface;
+use App\Repository\WorkoutSessionExerciseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class WorkoutSessionService
@@ -18,6 +19,7 @@ final class WorkoutSessionService
         private readonly EntityManagerInterface $entityManager,
         private readonly WorkoutSessionReaderInterface $sessionRepository,
         private readonly WorkoutProgramExerciseReaderInterface $programExerciseRepository,
+        private readonly ?WorkoutSessionExerciseRepository $sessionExerciseRepository = null,
     ) {
     }
 
@@ -102,6 +104,23 @@ final class WorkoutSessionService
         $this->entityManager->flush();
 
         return $session;
+    }
+
+    public function addExercise(WorkoutSession $session, Exercise $exercise): WorkoutSessionExercise
+    {
+        $this->assertActive($session);
+
+        $sessionExercise = (new WorkoutSessionExercise($session, $exercise))
+            ->setPosition($this->sessionExerciseRepository?->nextPositionForSession($session) ?? 1)
+            ->setTargetSets(3)
+            ->setTargetRepsMin(8)
+            ->setTargetRepsMax(10)
+            ->setRestSeconds(90);
+
+        $this->entityManager->persist($sessionExercise);
+        $this->entityManager->flush();
+
+        return $sessionExercise;
     }
 
     public function cancel(WorkoutSession $session): WorkoutSession

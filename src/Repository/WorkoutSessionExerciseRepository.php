@@ -21,4 +21,16 @@ final class WorkoutSessionExerciseRepository extends ServiceEntityRepository
     {
         return $this->findBy(['session' => $session], ['position' => 'ASC']);
     }
+
+    public function nextPositionForSession(WorkoutSession $session): int
+    {
+        $position = $this->createQueryBuilder('sessionExercise')
+            ->select('MAX(sessionExercise.position)')
+            ->andWhere('sessionExercise.session = :session')
+            ->setParameter('session', $session)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return ((int) $position) + 1;
+    }
 }
