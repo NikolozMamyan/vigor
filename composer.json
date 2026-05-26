@@ -79,6 +79,12 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd",
             "importmap:install": "symfony-cmd"
         },
+        "post-pull": [
+            "php bin/post-pull"
+        ],
+        "post-pull-prod": [
+            "php bin/post-pull prod"
+        ],
         "post-install-cmd": [
             "@auto-scripts"
         ],

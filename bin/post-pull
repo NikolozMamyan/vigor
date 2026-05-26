@@ -1,0 +1,44 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__);
+$env = $argv[1] ?? getenv('APP_ENV') ?: 'dev';
+$isProd = 'prod' === $env;
+putenv('APP_ENV='.$env);
+
+$commands = [
+    ['php', 'bin/console', 'tailwind:build', ...($isProd ? ['--minify'] : [])],
+    ['php', 'bin/console', 'asset-map:compile'],
+    ['php', 'bin/console', 'cache:clear', '--env='.$env],
+];
+
+foreach ($commands as $command) {
+    echo "\n> ".implode(' ', array_map(static fn (string $part): string => str_contains($part, ' ') ? escapeshellarg($part) : $part, $command))."\n";
+
+    $process = proc_open(
+        $command,
+        [
+            0 => STDIN,
+            1 => STDOUT,
+            2 => STDERR,
+        ],
+        $pipes,
+        $root
+    );
+
+    if (!is_resource($process)) {
+        fwrite(STDERR, "Unable to start command.\n");
+        exit(1);
+    }
+
+    $exitCode = proc_close($process);
+
+    if (0 !== $exitCode) {
+        fwrite(STDERR, sprintf("Command failed with exit code %d.\n", $exitCode));
+        exit($exitCode);
+    }
+}
+
+echo "\nPost-pull tasks completed for {$env}.\n";

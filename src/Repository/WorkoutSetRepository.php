@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\UserProfile;
+use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -32,5 +33,13 @@ final class WorkoutSetRepository extends ServiceEntityRepository
             ->orderBy('workoutSet.completedAt', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @return list<WorkoutSet>
+     */
+    public function findForSessionExercise(WorkoutSessionExercise $sessionExercise): array
+    {
+        return $this->findBy(['sessionExercise' => $sessionExercise], ['position' => 'ASC']);
     }
 }

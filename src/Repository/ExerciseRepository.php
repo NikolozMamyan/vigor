@@ -39,4 +39,28 @@ final class ExerciseRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * @return list<Exercise>
+     */
+    public function findCatalogForProfile(?UserProfile $profile = null, int $limit = 50): array
+    {
+        $qb = $this->createQueryBuilder('exercise')
+            ->setMaxResults($limit)
+            ->orderBy('exercise.source', 'DESC')
+            ->addOrderBy('exercise.name', 'ASC');
+
+        if ($profile) {
+            $qb
+                ->andWhere('exercise.source = :vigorSource OR exercise.createdByProfile = :profile')
+                ->setParameter('vigorSource', Exercise::SOURCE_VIGOR)
+                ->setParameter('profile', $profile);
+        } else {
+            $qb
+                ->andWhere('exercise.source = :vigorSource')
+                ->setParameter('vigorSource', Exercise::SOURCE_VIGOR);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

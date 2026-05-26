@@ -1,0 +1,171 @@
+<?php
+
+namespace App\Service\Workout;
+
+use App\Entity\WorkoutSet;
+use App\Repository\UserProfileRepository;
+use App\Repository\WorkoutSessionExerciseRepository;
+use App\Repository\WorkoutSessionRepository;
+use App\Repository\WorkoutSetRepository;
+
+final class ActiveWorkoutViewService
+{
+    public function __construct(
+        private readonly UserProfileRepository $profileRepository,
+        private readonly WorkoutSessionRepository $sessionRepository,
+        private readonly WorkoutSessionExerciseRepository $sessionExerciseRepository,
+        private readonly WorkoutSetRepository $setRepository,
+    ) {
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function build(): array
+    {
+        try {
+            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+
+            if (!$profile) {
+                return $this->fallback();
+            }
+
+            $session = $this->sessionRepository->findActiveForProfile($profile);
+
+            if (!$session) {
+                return $this->fallback();
+            }
+
+            $sessionExercises = $this->sessionExerciseRepository->findForSession($session);
+            $currentSessionExercise = $sessionExercises[0] ?? null;
+
+            if (!$currentSessionExercise) {
+                return $this->fallback();
+            }
+
+            $exercise = $currentSessionExercise->getExercise();
+            $sets = $this->setRepository->findForSessionExercise($currentSessionExercise);
+
+            return [
+                'sessionId' => $session->getId(),
+                'sessionName' => $session->getName(),
+                'statusLabel' => 'En cours',
+                'exercisePosition' => $currentSessionExercise->getPosition(),
+                'exerciseCount' => max(1, count($sessionExercises)),
+                'equipment' => $exercise->getEquipment(),
+                'title' => $exercise->getName(),
+                'titleLines' => $this->splitTitle($exercise->getName()),
+                'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+                'targetLabel' => $this->targetLabel($currentSessionExercise->getTargetSets(), $currentSessionExercise->getTargetRepsMin(), $currentSessionExercise->getTargetRepsMax()),
+                'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3),
+            ];
+        } catch (\Throwable) {
+            return $this->fallback();
+        }
+    }
+
+    /**
+     * @param list<WorkoutSet> $sets
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function normalizeSets(array $sets, int $targetSets): array
+    {
+        $normalized = [];
+
+        foreach ($sets as $set) {
+            $normalized[] = [
+                'id' => $set->getId(),
+                'number' => $set->getPosition(),
+                'previous' => $this->setLabel($set),
+                'weight' => 0.0 === $set->getWeight() ? null : $this->formatNumber($set->getWeight()),
+                'reps' => 0 === $set->getReps() ? null : $set->getReps(),
+                'completed' => null !== $set->getCompletedAt(),
+            ];
+        }
+
+        for ($position = count($normalized) + 1; $position <= $targetSets; ++$position) {
+            $normalized[] = [
+                'id' => null,
+                'number' => $position,
+                'previous' => 'A completer',
+                'weight' => null,
+                'reps' => null,
+                'completed' => false,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function setLabel(WorkoutSet $set): string
+    {
+        if ($set->getWeight() <= 0 || $set->getReps() <= 0) {
+            return 'A completer';
+        }
+
+        return sprintf('%skg x %d', $this->formatNumber($set->getWeight()), $set->getReps());
+    }
+
+    private function targetLabel(?int $sets, ?int $repsMin, ?int $repsMax): string
+    {
+        $sets ??= 3;
+
+        if ($repsMin && $repsMax && $repsMin !== $repsMax) {
+            return sprintf('%d x %d-%d', $sets, $repsMin, $repsMax);
+        }
+
+        if ($repsMin) {
+            return sprintf('%d x %d', $sets, $repsMin);
+        }
+
+        return sprintf('%d series', $sets);
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function splitTitle(string $title): array
+    {
+        $parts = explode(' ', $title);
+
+        if (count($parts) <= 1) {
+            return [$title, ''];
+        }
+
+        $last = array_pop($parts);
+
+        return [implode(' ', $parts), $last];
+    }
+
+    private function formatNumber(float $value): string
+    {
+        $rounded = round($value, 1);
+
+        return 0.0 === fmod($rounded, 1.0) ? (string) (int) $rounded : number_format($rounded, 1, '.', '');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fallback(): array
+    {
+        return [
+            'sessionId' => null,
+            'sessionName' => 'Seance libre',
+            'statusLabel' => 'En cours',
+            'exercisePosition' => 1,
+            'exerciseCount' => 1,
+            'equipment' => 'Barre Olympique',
+            'title' => 'Developpe Couche',
+            'titleLines' => ['Developpe', 'Couche'],
+            'image' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
+            'targetLabel' => '3 x 8-10',
+            'sets' => [
+                ['id' => null, 'number' => 1, 'previous' => '80kg x 10', 'weight' => 80, 'reps' => 10, 'completed' => false],
+                ['id' => null, 'number' => 2, 'previous' => '80kg x 8', 'weight' => null, 'reps' => null, 'completed' => false],
+                ['id' => null, 'number' => 3, 'previous' => '77.5kg x 9', 'weight' => null, 'reps' => null, 'completed' => false],
+            ],
+        ];
+    }
+}

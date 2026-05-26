@@ -1,27 +1,27 @@
 <section id="view-workout" class="tab-content {{ activeView == 'workout' ? 'active' }} px-0 space-y-6" data-vigor-navigation-target="view" data-view="workout">
     <div class="relative w-full h-80 -mt-24">
-        <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop" alt="Seance developpe couche" class="w-full h-full object-cover opacity-60 mix-blend-luminosity">
+        <img src="{{ activeWorkout.image }}" alt="Seance {{ activeWorkout.title }}" class="w-full h-full object-cover opacity-60 mix-blend-luminosity">
         <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#050505]"></div>
         <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
         <div class="absolute top-28 left-6 flex gap-2">
             <span class="glass-panel px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase tracking-widest border-white/20 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse"></span> En cours
+                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse"></span> {{ activeWorkout.statusLabel }}
             </span>
         </div>
         <div class="absolute bottom-4 left-6 right-6">
-            <span class="text-app-accent text-[10px] font-bold uppercase tracking-widest mb-2 block">Exercice 1/6 - Barre Olympique</span>
-            <h2 class="text-4xl font-extrabold text-white leading-tight drop-shadow-lg">Developpe <br>Couche</h2>
+            <span class="text-app-accent text-[10px] font-bold uppercase tracking-widest mb-2 block">Exercice {{ activeWorkout.exercisePosition }}/{{ activeWorkout.exerciseCount }} - {{ activeWorkout.equipment }}</span>
+            <h2 class="text-4xl font-extrabold text-white leading-tight drop-shadow-lg">{{ activeWorkout.titleLines[0] }}{% if activeWorkout.titleLines[1] %} <br>{{ activeWorkout.titleLines[1] }}{% endif %}</h2>
         </div>
     </div>
 
     <div class="px-6 space-y-4">
         <div class="flex justify-between items-end mb-2">
-            <h3 class="text-sm font-semibold text-app-muted uppercase tracking-wider">Objectif : 3 x 8-10</h3>
+            <h3 class="text-sm font-semibold text-app-muted uppercase tracking-wider">Objectif : {{ activeWorkout.targetLabel }}</h3>
             <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1 rounded-full">Historique</button>
         </div>
 
-        {% for set in sets %}
-            <div class="set-row glass-panel rounded-2xl p-4 flex items-center justify-between group">
+        {% for set in activeWorkout.sets %}
+            <div class="set-row glass-panel rounded-2xl p-4 flex items-center justify-between group {{ set.completed ? 'checked' }}">
                 <div class="flex items-center gap-4">
                     <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">{{ set.number }}</div>
                     <div class="flex flex-col">
@@ -35,7 +35,7 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="check-btn w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="rest-timer#toggleSet">
+                <button type="button" class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="rest-timer#toggleSet">
                     <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
                 </button>
             </div>
