@@ -87,7 +87,30 @@ final class WorkoutProgramController extends AbstractController
             'name' => $program->getName(),
             'description' => $program->getDescription(),
             'exerciseCount' => count($exercises),
+            'meta' => $program->getEstimatedDurationMinutes()
+                ? sprintf('%d min - %d exo%s', $program->getEstimatedDurationMinutes(), count($exercises), count($exercises) > 1 ? 's' : '')
+                : sprintf('%d exo%s', count($exercises), count($exercises) > 1 ? 's' : ''),
+            'exercises' => array_map(fn ($programExercise): array => [
+                'name' => $programExercise->getExercise()->getName(),
+                'muscleGroup' => $programExercise->getExercise()->getMuscleGroup(),
+                'image' => $programExercise->getExercise()->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
+                'target' => $this->programExerciseTarget($programExercise),
+            ], $exercises),
         ];
+    }
+
+    private function programExerciseTarget(\App\Entity\WorkoutProgramExercise $programExercise): string
+    {
+        $reps = $programExercise->getTargetRepsMin() === $programExercise->getTargetRepsMax()
+            ? (string) $programExercise->getTargetRepsMin()
+            : sprintf('%d-%d', $programExercise->getTargetRepsMin(), $programExercise->getTargetRepsMax());
+        $target = sprintf('%d x %s reps', $programExercise->getTargetSets(), $reps);
+
+        if ($programExercise->getTargetWeight()) {
+            $target = $programExercise->getTargetWeight().'kg - '.$target;
+        }
+
+        return $target;
     }
 
     /**

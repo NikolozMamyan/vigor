@@ -184,9 +184,9 @@ final class ExerciseCatalogService
                 ['label' => 'Bras', 'icon' => 'dumbbell', 'active' => false],
             ],
             'exercises' => [
-                ['name' => 'Squat', 'category' => 'Jambes', 'tag' => 'Barre', 'image' => 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
-                ['name' => 'Curl Biceps', 'category' => 'Bras', 'tag' => 'Halteres', 'image' => 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
-                ['name' => 'Tirage elastique maison', 'category' => 'Dos', 'tag' => 'Elastique', 'image' => 'https://placehold.co/600x400/18181b/ccff00?text=VIGOR', 'source' => Exercise::SOURCE_CUSTOM, 'isCustom' => true],
+                ['id' => 1, 'name' => 'Squat', 'category' => 'Jambes', 'tag' => 'Barre', 'image' => 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
+                ['id' => 2, 'name' => 'Curl Biceps', 'category' => 'Bras', 'tag' => 'Halteres', 'image' => 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
+                ['id' => 3, 'name' => 'Tirage elastique maison', 'category' => 'Dos', 'tag' => 'Elastique', 'image' => 'https://placehold.co/600x400/18181b/ccff00?text=VIGOR', 'source' => Exercise::SOURCE_CUSTOM, 'isCustom' => true],
             ],
         ];
     }

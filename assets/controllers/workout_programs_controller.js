@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['modal', 'name', 'search', 'exerciseOptions', 'selectedList', 'emptySelection', 'counter'];
+    static targets = ['modal', 'name', 'search', 'exerciseOptions', 'selectedList', 'emptySelection', 'counter', 'list'];
     static values = {
         exercises: Array,
     };
@@ -49,7 +49,9 @@ export default class extends Controller {
         const program = await this.request('/api/workout-programs', 'POST', { name, exercises });
 
         if (program) {
-            window.location.reload();
+            this.prependProgram(program);
+            this.closeCreate();
+            this.resetCreateForm();
             return;
         }
 
@@ -191,9 +193,7 @@ export default class extends Controller {
 
         return `
             <button type="button" class="w-full rounded-2xl ${selected ? 'bg-app-accent text-black border-app-accent shadow-neon' : 'bg-black/20 text-white border-white/10'} border p-3 flex items-center gap-3 text-left transition-colors" data-action="workout-programs#toggleExercise" data-exercise-id="${exercise.id}">
-                <span class="w-10 h-10 rounded-xl ${selected ? 'bg-black/10' : 'bg-white/[0.06] border border-white/10'} flex items-center justify-center">
-                    <i data-lucide="${selected ? 'check' : 'plus'}" class="w-4 h-4"></i>
-                </span>
+                <img src="${this.escapeAttribute(exercise.image)}" alt="" class="w-10 h-10 rounded-xl object-cover border ${selected ? 'border-black/10' : 'border-white/10'}">
                 <span class="min-w-0 flex-1">
                     <span class="block text-sm font-extrabold truncate">${this.escapeHtml(exercise.name)}</span>
                     <span class="block text-[10px] ${selected ? 'text-black/60' : 'text-app-muted'} uppercase font-bold tracking-wider">${this.escapeHtml(exercise.category)} - ${this.escapeHtml(exercise.tag)}</span>
@@ -225,9 +225,7 @@ export default class extends Controller {
         return `
             <div class="rounded-3xl bg-black/20 border border-white/10 p-4 space-y-4" data-selected-exercise-id="${exercise.id}">
                 <div class="flex items-start gap-3">
-                    <span class="w-10 h-10 rounded-xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
-                        <i data-lucide="dumbbell" class="w-4 h-4 text-app-accent"></i>
-                    </span>
+                    <img src="${this.escapeAttribute(exercise.image)}" alt="" class="w-10 h-10 rounded-xl object-cover border border-white/10">
                     <span class="min-w-0 flex-1">
                         <span class="block text-sm font-extrabold text-white truncate">${this.escapeHtml(exercise.name)}</span>
                         <span class="block text-[10px] text-app-muted uppercase font-bold tracking-wider">${this.escapeHtml(exercise.category)}</span>
@@ -306,5 +304,57 @@ export default class extends Controller {
 
     escapeAttribute(value) {
         return this.escapeHtml(value);
+    }
+
+    prependProgram(program) {
+        this.listTarget?.insertAdjacentHTML('afterbegin', this.programCard(program));
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    programCard(program) {
+        const exercises = (program.exercises || []).map((exercise) => `
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0 flex items-center gap-2">
+                    <img src="${this.escapeAttribute(exercise.image)}" alt="" class="w-8 h-8 rounded-xl object-cover border border-white/10">
+                    <span class="min-w-0">
+                        <span class="block text-xs font-bold text-white truncate">${this.escapeHtml(exercise.name)}</span>
+                        <span class="block text-[10px] text-app-muted uppercase font-bold tracking-wider">${this.escapeHtml(exercise.muscleGroup)}</span>
+                    </span>
+                </div>
+                <span class="text-[10px] font-bold text-app-accent whitespace-nowrap">${this.escapeHtml(exercise.target)}</span>
+            </div>
+        `).join('');
+
+        return `
+            <article class="glass-panel rounded-2xl p-4 space-y-3" data-program-row-id="${program.id}">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                        <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-sm font-extrabold text-white truncate">${this.escapeHtml(program.name)}</h4>
+                        <p class="text-[11px] text-app-muted">${this.escapeHtml(program.description || 'Programme personnalise')} - ${this.escapeHtml(program.meta || '')}</p>
+                    </div>
+                    <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10" data-action="workout-programs#delete" data-program-id="${program.id}" aria-label="Supprimer ${this.escapeAttribute(program.name)}">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="${program.id}" aria-label="Demarrer ${this.escapeAttribute(program.name)}">
+                        <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                    </button>
+                </div>
+                <div class="space-y-2 border-t border-white/5 pt-3">${exercises}</div>
+            </article>
+        `;
+    }
+
+    resetCreateForm() {
+        this.nameTarget.value = 'Mon programme';
+        this.searchTarget.value = '';
+        this.selectedExercises.clear();
+        this.renderExerciseOptions();
+        this.renderSelectedExercises();
     }
 }

@@ -3,8 +3,10 @@
 namespace App\Controller\Api;
 
 use App\Entity\WorkoutSession;
+use App\Entity\WorkoutSessionExercise;
 use App\Repository\ExerciseRepository;
 use App\Repository\UserProfileRepository;
+use App\Repository\WorkoutSetRepository;
 use App\Service\Workout\WorkoutSessionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -83,11 +85,41 @@ final class WorkoutSessionController extends AbstractController
                 'exerciseId' => $exercise->getId(),
                 'exerciseName' => $exercise->getName(),
                 'muscleGroup' => $exercise->getMuscleGroup(),
+                'equipment' => $exercise->getEquipment(),
+                'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+                'sets' => $this->placeholderSets($sessionExercise),
                 'position' => $sessionExercise->getPosition(),
             ], JsonResponse::HTTP_CREATED);
         } catch (\InvalidArgumentException|\JsonException $exception) {
             return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    #[Route('/api/workout-session-exercises/{id}', name: 'api_workout_session_exercises_show', methods: ['GET'])]
+    public function showSessionExercise(WorkoutSessionExercise $sessionExercise, WorkoutSetRepository $setRepository): JsonResponse
+    {
+        $exercise = $sessionExercise->getExercise();
+        $sets = $setRepository->findForSessionExercise($sessionExercise);
+
+        return $this->json([
+            'id' => $sessionExercise->getId(),
+            'sessionId' => $sessionExercise->getSession()->getId(),
+            'exerciseId' => $exercise->getId(),
+            'exerciseName' => $exercise->getName(),
+            'muscleGroup' => $exercise->getMuscleGroup(),
+            'equipment' => $exercise->getEquipment(),
+            'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+            'targetLabel' => $this->targetLabel($sessionExercise),
+            'sets' => [] === $sets ? $this->placeholderSets($sessionExercise) : array_map(fn ($set): array => [
+                'id' => $set->getId(),
+                'sessionExerciseId' => $sessionExercise->getId(),
+                'number' => $set->getPosition(),
+                'previous' => $set->getWeight() > 0 && $set->getReps() > 0 ? $set->getWeight().'kg x '.$set->getReps() : 'A completer',
+                'weight' => $set->getWeight() > 0 ? $set->getWeight() : null,
+                'reps' => $set->getReps() > 0 ? $set->getReps() : null,
+                'completed' => null !== $set->getCompletedAt(),
+            ], $sets),
+        ]);
     }
 
     /**
@@ -101,5 +133,40 @@ final class WorkoutSessionController extends AbstractController
             'completedAt' => $session->getCompletedAt()?->format(\DateTimeInterface::ATOM),
             'durationSeconds' => $session->getDurationSeconds(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function placeholderSets(WorkoutSessionExercise $sessionExercise): array
+    {
+        $sets = [];
+
+        for ($position = 1; $position <= ($sessionExercise->getTargetSets() ?? 3); ++$position) {
+            $sets[] = [
+                'id' => null,
+                'sessionExerciseId' => $sessionExercise->getId(),
+                'number' => $position,
+                'previous' => 'A completer',
+                'weight' => null,
+                'reps' => null,
+                'completed' => false,
+            ];
+        }
+
+        return $sets;
+    }
+
+    private function targetLabel(WorkoutSessionExercise $sessionExercise): string
+    {
+        $sets = $sessionExercise->getTargetSets() ?? 3;
+        $min = $sessionExercise->getTargetRepsMin();
+        $max = $sessionExercise->getTargetRepsMax();
+
+        if ($min && $max && $min !== $max) {
+            return sprintf('%d x %d-%d', $sets, $min, $max);
+        }
+
+        return $min ? sprintf('%d x %d', $sets, $min) : sprintf('%d series', $sets);
     }
 }

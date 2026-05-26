@@ -64,6 +64,7 @@ final class ActiveWorkoutViewService
                     'id' => $sessionExercise->getId(),
                     'name' => $sessionExercise->getExercise()->getName(),
                     'muscleGroup' => $sessionExercise->getExercise()->getMuscleGroup(),
+                    'image' => $sessionExercise->getExercise()->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
                     'active' => $sessionExercise->getId() === $currentSessionExercise->getId(),
                 ], $sessionExercises),
                 'equipment' => $exercise->getEquipment(),
@@ -196,6 +197,7 @@ final class ActiveWorkoutViewService
                 'exercises' => array_map(fn ($programExercise): array => [
                     'name' => $programExercise->getExercise()->getName(),
                     'muscleGroup' => $programExercise->getExercise()->getMuscleGroup(),
+                    'image' => $programExercise->getExercise()->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
                     'target' => $this->programExerciseTarget($programExercise),
                 ], $exercises),
             ];
@@ -250,7 +252,7 @@ final class ActiveWorkoutViewService
             'exercisePosition' => 1,
             'exerciseCount' => 1,
             'exerciseList' => [
-                ['id' => null, 'name' => 'Developpe Couche', 'muscleGroup' => 'Pectoraux', 'active' => true],
+                ['id' => null, 'name' => 'Developpe Couche', 'muscleGroup' => 'Pectoraux', 'image' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop', 'active' => true],
             ],
             'equipment' => 'Barre Olympique',
             'title' => 'Developpe Couche',
