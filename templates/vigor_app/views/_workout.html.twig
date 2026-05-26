@@ -1,4 +1,5 @@
 <section id="view-workout" class="tab-content {{ activeView == 'workout' ? 'active' }} px-0 space-y-6" data-vigor-navigation-target="view" data-view="workout">
+    {% if activeWorkout.hasActiveSession is not defined or activeWorkout.hasActiveSession %}
     <div class="relative w-full h-80 -mt-24">
         <img src="{{ activeWorkout.image }}" alt="Seance {{ activeWorkout.title }}" class="w-full h-full object-cover opacity-60 mix-blend-luminosity">
         <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#050505]"></div>
@@ -14,35 +15,132 @@
         </div>
     </div>
 
-    <div class="px-6 space-y-4">
+    <div class="px-6 space-y-4" data-controller="active-workout" data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}" data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}">
         <div class="flex justify-between items-end mb-2">
             <h3 class="text-sm font-semibold text-app-muted uppercase tracking-wider">Objectif : {{ activeWorkout.targetLabel }}</h3>
             <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1 rounded-full">Historique</button>
         </div>
 
-        {% for set in activeWorkout.sets %}
-            <div class="set-row glass-panel rounded-2xl p-4 flex items-center justify-between group {{ set.completed ? 'checked' }}">
-                <div class="flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">{{ set.number }}</div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: {{ set.previous }}</span>
-                        <div class="flex items-baseline gap-1">
-                            <input type="number" inputmode="decimal" value="{{ set.weight }}" placeholder="80" aria-label="Poids serie {{ set.number }}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1">
-                            <span class="text-app-muted font-medium text-sm mr-2">kg</span>
-                            <span class="text-white/30 text-lg mx-1">x</span>
-                            <input type="number" inputmode="numeric" value="{{ set.reps }}" placeholder="8" aria-label="Repetitions serie {{ set.number }}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1">
-                            <span class="text-app-muted font-medium text-sm">reps</span>
+        <div class="grid grid-cols-2 gap-3">
+            <button type="button" class="glass-panel rounded-2xl px-4 py-3 text-xs font-bold text-app-muted hover:text-white hover:bg-white/5 transition-colors" data-action="active-workout#cancelSession">
+                Annuler
+            </button>
+            <button type="button" class="rounded-2xl px-4 py-3 text-xs font-extrabold text-black bg-app-accent shadow-neon hover:scale-[1.02] transition-transform" data-action="active-workout#completeSession">
+                Terminer
+            </button>
+        </div>
+
+        <div class="space-y-4" data-active-workout-target="sets">
+            {% for set in activeWorkout.sets %}
+                <div
+                    class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative {{ set.completed ? 'checked' }}"
+                    data-controller="workout-set"
+                    data-workout-set-id-value="{{ set.id ?? 0 }}"
+                    data-workout-set-session-exercise-id-value="{{ set.sessionExerciseId ?? 0 }}"
+                    data-workout-set-position-value="{{ set.number }}"
+                >
+                    <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie {{ set.number }}" data-action="workout-set#remove">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">{{ set.number }}</div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: {{ set.previous }}</span>
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" inputmode="decimal" value="{{ set.weight }}" placeholder="80" aria-label="Poids serie {{ set.number }}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm mr-2">kg</span>
+                                <span class="text-white/30 text-lg mx-1">x</span>
+                                <input type="number" inputmode="numeric" value="{{ set.reps }}" placeholder="8" aria-label="Repetitions serie {{ set.number }}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm">reps</span>
+                            </div>
                         </div>
                     </div>
+                    <button type="button" class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
+                        <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
+                    </button>
                 </div>
-                <button type="button" class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="rest-timer#toggleSet">
-                    <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
-                </button>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
 
-        <button type="button" class="w-full py-4 text-xs font-bold text-app-muted hover:text-white border border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-2 transition-colors mt-2 bg-white/5 hover:bg-white/10">
+        <button type="button" class="w-full py-4 text-xs font-bold text-app-muted hover:text-white border border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-2 transition-colors mt-2 bg-white/5 hover:bg-white/10" data-action="active-workout#addSet">
             <i data-lucide="plus" class="w-4 h-4"></i> AJOUTER UNE SERIE
         </button>
     </div>
+    {% else %}
+        <div class="px-6 pt-4 space-y-5" data-controller="workout-programs">
+            <div class="relative overflow-hidden glass-panel rounded-[2rem] p-6 min-h-[220px] flex flex-col justify-end">
+                <div class="absolute inset-0 bg-gradient-to-br from-app-accent/15 via-transparent to-cyan-400/10"></div>
+                <div class="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-app-accent/20 blur-[50px]"></div>
+                <div class="relative z-10">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-app-muted mb-4">
+                        <i data-lucide="pause-circle" class="w-3 h-3"></i> Aucune seance active
+                    </span>
+                    <h2 class="text-4xl font-extrabold text-white leading-tight mb-2">Choisis ton <br>depart.</h2>
+                    <p class="text-sm text-app-muted max-w-[18rem]">Selectionne un programme existant ou cree une base simple pour commencer.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between px-1">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Programmes</h3>
+                <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1.5 rounded-full flex items-center gap-1.5" data-action="workout-programs#openCreate">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Creer
+                </button>
+            </div>
+
+            <div class="space-y-3" data-workout-programs-target="list">
+                {% for program in activeWorkout.programs %}
+                    <article class="glass-panel rounded-2xl p-4 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                            <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-extrabold text-white truncate">{{ program.name }}</h4>
+                            <p class="text-[11px] text-app-muted">{{ program.description }} - {{ program.meta }}</p>
+                        </div>
+                        <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="{{ program.id }}" aria-label="Demarrer {{ program.name }}">
+                            <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                        </button>
+                    </article>
+                {% else %}
+                    <div class="glass-panel rounded-2xl p-5 text-center border-dashed">
+                        <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
+                            <i data-lucide="clipboard-list" class="w-5 h-5 text-app-muted"></i>
+                        </div>
+                        <p class="text-sm font-bold text-white mb-1">Aucun programme</p>
+                        <p class="text-xs text-app-muted">Cree ton premier programme pour le demarrer depuis cette page.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" class="w-full rounded-[1.5rem] bg-white/5 border border-white/10 p-4 flex items-center justify-between hover:bg-white/10 transition-colors" data-action="workout-programs#startFree">
+                <span class="text-left">
+                    <span class="block text-sm font-extrabold text-white">Seance libre</span>
+                    <span class="block text-xs text-app-muted">Demarrer sans programme.</span>
+                </span>
+                <span class="w-11 h-11 rounded-2xl bg-white/10 text-white flex items-center justify-center">
+                    <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                </span>
+            </button>
+
+            <div class="fixed inset-0 z-[80] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
+                <div class="absolute inset-0 bg-black/70 backdrop-blur-xl" data-action="click->workout-programs#closeCreate"></div>
+                <div class="absolute left-1/2 bottom-6 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 glass-panel rounded-[2rem] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)] border-white/15">
+                    <div class="flex items-start justify-between gap-4 mb-5">
+                        <div>
+                            <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Nouveau programme</p>
+                            <h3 class="text-2xl font-extrabold text-white">Cree ta base</h3>
+                        </div>
+                        <button type="button" class="w-9 h-9 rounded-full bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest mb-2" for="program-name">Nom du programme</label>
+                    <input id="program-name" type="text" value="Mon programme" class="w-full glass-panel rounded-2xl px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent mb-4" data-workout-programs-target="name">
+                    <button type="button" class="w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="workout-programs#create">
+                        Creer le programme
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </section>

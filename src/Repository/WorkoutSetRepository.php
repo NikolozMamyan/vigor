@@ -8,7 +8,7 @@ use App\Entity\WorkoutSet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-final class WorkoutSetRepository extends ServiceEntityRepository
+final class WorkoutSetRepository extends ServiceEntityRepository implements WorkoutSetReaderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -41,5 +41,13 @@ final class WorkoutSetRepository extends ServiceEntityRepository
     public function findForSessionExercise(WorkoutSessionExercise $sessionExercise): array
     {
         return $this->findBy(['sessionExercise' => $sessionExercise], ['position' => 'ASC']);
+    }
+
+    public function findOneForSessionExerciseAtPosition(WorkoutSessionExercise $sessionExercise, int $position): ?WorkoutSet
+    {
+        return $this->findOneBy([
+            'sessionExercise' => $sessionExercise,
+            'position' => $position,
+        ]);
     }
 }

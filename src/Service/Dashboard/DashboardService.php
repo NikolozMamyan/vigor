@@ -49,9 +49,10 @@ final class DashboardService
                     'streakDays' => $this->calculateStreakDays($profile, $now),
                 ],
                 'cta' => [
-                    'label' => $activeSession ? 'En cours' : 'Au programme',
-                    'title' => $activeSession?->getName() ?? 'Seance libre',
-                    'meta' => $activeSession ? 'Active maintenant' : 'Demarrer une seance libre',
+                    'active' => null !== $activeSession,
+                    'label' => $activeSession ? 'En cours' : 'Aucune seance en cours',
+                    'title' => $activeSession?->getName() ?? 'Pret a demarrer',
+                    'meta' => $activeSession ? 'Active maintenant' : 'Choisir une seance libre ou un programme',
                 ],
             ];
         } catch (\Throwable) {
@@ -106,14 +107,35 @@ final class DashboardService
             $volumeByDay[$dayIndex] += $set->getVolume();
         }
 
+        $dayLetters = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+        $dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
         $total = array_sum($volumeByDay);
         $previousTotal = $this->sumVolume($completedPreviousWeek);
         $max = max($volumeByDay) ?: 1.0;
         $activeIndex = array_search($max, $volumeByDay, true);
         $activeIndex = false === $activeIndex ? ((int) (new \DateTimeImmutable())->format('N')) - 1 : $activeIndex;
-        $dayLetters = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-        $dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
         $days = [];
+
+        if ($total <= 0) {
+            foreach ($volumeByDay as $index => $volume) {
+                $days[] = [
+                    'day' => $dayLetters[$index],
+                    'value' => $this->formatTons($volume),
+                    'label' => $dayNames[$index],
+                    'height' => 0,
+                    'rest' => true,
+                    'active' => false,
+                ];
+            }
+
+            return [
+                'days' => $days,
+                'selectedValue' => '0',
+                'selectedLabel' => 'Aucune serie cochee cette semaine',
+                'totalTons' => '0',
+                'trendPercent' => 0,
+            ];
+        }
 
         foreach ($volumeByDay as $index => $volume) {
             $isRest = $volume <= 0;
@@ -262,7 +284,7 @@ final class DashboardService
                 ['exercise' => 'Developpe couche', 'value' => '95', 'unit' => 'kg x 6', 'date' => 'Il y a 3j', 'gain' => '+2.5kg', 'previous' => 'vs 92.5kg'],
             ],
             'stats' => ['weeklyVolumeTons' => '14.2', 'streakDays' => 4],
-            'cta' => ['label' => 'Au programme', 'title' => 'Hypertrophie Push', 'meta' => '45 Min - 6 Exos'],
+            'cta' => ['active' => true, 'label' => 'En cours', 'title' => 'Hypertrophie Push', 'meta' => '45 Min - 6 Exos'],
         ];
     }
 }

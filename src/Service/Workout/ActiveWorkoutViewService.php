@@ -4,6 +4,8 @@ namespace App\Service\Workout;
 
 use App\Entity\WorkoutSet;
 use App\Repository\UserProfileRepository;
+use App\Repository\WorkoutProgramExerciseRepository;
+use App\Repository\WorkoutProgramRepository;
 use App\Repository\WorkoutSessionExerciseRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Repository\WorkoutSetRepository;
@@ -15,6 +17,8 @@ final class ActiveWorkoutViewService
         private readonly WorkoutSessionRepository $sessionRepository,
         private readonly WorkoutSessionExerciseRepository $sessionExerciseRepository,
         private readonly WorkoutSetRepository $setRepository,
+        private readonly WorkoutProgramRepository $programRepository,
+        private readonly WorkoutProgramExerciseRepository $programExerciseRepository,
     ) {
     }
 
@@ -33,7 +37,7 @@ final class ActiveWorkoutViewService
             $session = $this->sessionRepository->findActiveForProfile($profile);
 
             if (!$session) {
-                return $this->fallback();
+                return $this->noActiveWorkout($profile);
             }
 
             $sessionExercises = $this->sessionExerciseRepository->findForSession($session);
@@ -47,7 +51,9 @@ final class ActiveWorkoutViewService
             $sets = $this->setRepository->findForSessionExercise($currentSessionExercise);
 
             return [
+                'hasActiveSession' => true,
                 'sessionId' => $session->getId(),
+                'sessionExerciseId' => $currentSessionExercise->getId(),
                 'sessionName' => $session->getName(),
                 'statusLabel' => 'En cours',
                 'exercisePosition' => $currentSessionExercise->getPosition(),
@@ -57,7 +63,7 @@ final class ActiveWorkoutViewService
                 'titleLines' => $this->splitTitle($exercise->getName()),
                 'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
                 'targetLabel' => $this->targetLabel($currentSessionExercise->getTargetSets(), $currentSessionExercise->getTargetRepsMin(), $currentSessionExercise->getTargetRepsMax()),
-                'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3),
+                'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3, $currentSessionExercise->getId()),
             ];
         } catch (\Throwable) {
             return $this->fallback();
@@ -69,13 +75,14 @@ final class ActiveWorkoutViewService
      *
      * @return list<array<string, mixed>>
      */
-    private function normalizeSets(array $sets, int $targetSets): array
+    private function normalizeSets(array $sets, int $targetSets, ?int $sessionExerciseId): array
     {
         $normalized = [];
 
         foreach ($sets as $set) {
             $normalized[] = [
                 'id' => $set->getId(),
+                'sessionExerciseId' => $sessionExerciseId,
                 'number' => $set->getPosition(),
                 'previous' => $this->setLabel($set),
                 'weight' => 0.0 === $set->getWeight() ? null : $this->formatNumber($set->getWeight()),
@@ -87,6 +94,7 @@ final class ActiveWorkoutViewService
         for ($position = count($normalized) + 1; $position <= $targetSets; ++$position) {
             $normalized[] = [
                 'id' => null,
+                'sessionExerciseId' => $sessionExerciseId,
                 'number' => $position,
                 'previous' => 'A completer',
                 'weight' => null,
@@ -148,10 +156,37 @@ final class ActiveWorkoutViewService
     /**
      * @return array<string, mixed>
      */
+    private function noActiveWorkout(\App\Entity\UserProfile $profile): array
+    {
+        $programs = [];
+
+        foreach ($this->programRepository->findForProfile($profile) as $program) {
+            $exercises = $this->programExerciseRepository->findForProgram($program);
+
+            $programs[] = [
+                'id' => $program->getId(),
+                'name' => $program->getName(),
+                'description' => $program->getDescription() ?? 'Programme personnalise',
+                'exerciseCount' => count($exercises),
+                'meta' => sprintf('%d exo%s', count($exercises), count($exercises) > 1 ? 's' : ''),
+            ];
+        }
+
+        return [
+            'hasActiveSession' => false,
+            'programs' => $programs,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function fallback(): array
     {
         return [
+            'hasActiveSession' => true,
             'sessionId' => null,
+            'sessionExerciseId' => null,
             'sessionName' => 'Seance libre',
             'statusLabel' => 'En cours',
             'exercisePosition' => 1,
@@ -162,10 +197,11 @@ final class ActiveWorkoutViewService
             'image' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
             'targetLabel' => '3 x 8-10',
             'sets' => [
-                ['id' => null, 'number' => 1, 'previous' => '80kg x 10', 'weight' => 80, 'reps' => 10, 'completed' => false],
-                ['id' => null, 'number' => 2, 'previous' => '80kg x 8', 'weight' => null, 'reps' => null, 'completed' => false],
-                ['id' => null, 'number' => 3, 'previous' => '77.5kg x 9', 'weight' => null, 'reps' => null, 'completed' => false],
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 1, 'previous' => '80kg x 10', 'weight' => 80, 'reps' => 10, 'completed' => false],
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 2, 'previous' => '80kg x 8', 'weight' => null, 'reps' => null, 'completed' => false],
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 3, 'previous' => '77.5kg x 9', 'weight' => null, 'reps' => null, 'completed' => false],
             ],
+            'programs' => [],
         ];
     }
 }

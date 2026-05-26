@@ -63,4 +63,9 @@ final class ExerciseRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    public function findDefaultForProfile(?UserProfile $profile = null): ?Exercise
+    {
+        return $this->findCatalogForProfile($profile, 1)[0] ?? null;
+    }
 }

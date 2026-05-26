@@ -8,7 +8,7 @@ use App\Entity\UserProfile;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-final class PersonalRecordRepository extends ServiceEntityRepository
+final class PersonalRecordRepository extends ServiceEntityRepository implements PersonalRecordReaderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

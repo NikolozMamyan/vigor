@@ -22,3 +22,7 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    App\Repository\WorkoutSetReaderInterface: '@App\Repository\WorkoutSetRepository'
+    App\Repository\PersonalRecordReaderInterface: '@App\Repository\PersonalRecordRepository'
+    App\Repository\WorkoutSessionReaderInterface: '@App\Repository\WorkoutSessionRepository'
+    App\Repository\WorkoutProgramExerciseReaderInterface: '@App\Repository\WorkoutProgramExerciseRepository'

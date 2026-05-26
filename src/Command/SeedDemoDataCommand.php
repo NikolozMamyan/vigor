@@ -8,8 +8,11 @@ use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
+use App\Entity\WorkoutProgram;
+use App\Entity\WorkoutProgramExercise;
 use App\Repository\ExerciseRepository;
 use App\Repository\UserProfileRepository;
+use App\Repository\WorkoutProgramRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Service\Workout\OneRepMaxCalculator;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,6 +33,7 @@ final class SeedDemoDataCommand extends Command
         private readonly UserProfileRepository $profileRepository,
         private readonly ExerciseRepository $exerciseRepository,
         private readonly WorkoutSessionRepository $sessionRepository,
+        private readonly WorkoutProgramRepository $programRepository,
         private readonly OneRepMaxCalculator $oneRepMaxCalculator,
     ) {
         parent::__construct();
@@ -42,6 +46,7 @@ final class SeedDemoDataCommand extends Command
         $profile = $this->seedProfile();
         $exercises = $this->seedExercises($profile);
         $this->seedCompletedSession($profile, $exercises);
+        $this->seedPrograms($profile, $exercises);
         $this->seedActiveSession($profile, $exercises);
 
         $this->entityManager->flush();
@@ -175,6 +180,37 @@ final class SeedDemoDataCommand extends Command
             }
 
             $this->entityManager->persist($set);
+        }
+    }
+
+    /**
+     * @param array<string, Exercise> $exercises
+     */
+    private function seedPrograms(UserProfile $profile, array $exercises): void
+    {
+        if ($this->programRepository->findOneBy(['profile' => $profile, 'name' => 'Hypertrophie Push'])) {
+            return;
+        }
+
+        $program = (new WorkoutProgram($profile))
+            ->setName('Hypertrophie Push')
+            ->setDescription('Pecs, epaules, triceps');
+
+        $this->entityManager->persist($program);
+
+        foreach ([
+            [$exercises['developpe-couche'], 1, 4, 6, 8],
+            [$exercises['developpe-militaire'], 2, 3, 8, 10],
+            [$exercises['curl-biceps'], 3, 3, 10, 12],
+        ] as [$exercise, $position, $sets, $repsMin, $repsMax]) {
+            $programExercise = (new WorkoutProgramExercise($program, $exercise))
+                ->setPosition($position)
+                ->setTargetSets($sets)
+                ->setTargetRepsMin($repsMin)
+                ->setTargetRepsMax($repsMax)
+                ->setRestSeconds(90);
+
+            $this->entityManager->persist($programExercise);
         }
     }
 

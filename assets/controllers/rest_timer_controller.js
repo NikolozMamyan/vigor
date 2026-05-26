@@ -12,25 +12,42 @@ export default class extends Controller {
                 this.close();
             }
         };
+        this.boundWorkoutSetTimerStart = () => this.startFromSet();
+        this.boundWorkoutSetTimerClose = () => this.close();
 
         this.element.addEventListener('vigor:navigate', this.boundCloseOnNavigate);
+        this.element.addEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
+        this.element.addEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
         this.update();
     }
 
     disconnect() {
         window.clearInterval(this.interval);
         this.element.removeEventListener('vigor:navigate', this.boundCloseOnNavigate);
+        this.element.removeEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
+        this.element.removeEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
     }
 
     toggleSet(event) {
         const button = event.currentTarget;
+        this.setChecked(button, !button.classList.contains('checked'));
+    }
+
+    startFromSet() {
+        if (navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+
+        this.start();
+    }
+
+    setChecked(button, checked) {
         const row = button.closest('.set-row');
-        const isChecked = button.classList.contains('checked');
 
-        button.classList.toggle('checked', !isChecked);
-        row?.classList.toggle('checked', !isChecked);
+        button.classList.toggle('checked', checked);
+        row?.classList.toggle('checked', checked);
 
-        if (isChecked) {
+        if (!checked) {
             this.close();
             return;
         }
