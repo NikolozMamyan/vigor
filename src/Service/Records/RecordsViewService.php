@@ -4,12 +4,12 @@ namespace App\Service\Records;
 
 use App\Entity\PersonalRecord;
 use App\Repository\PersonalRecordRepository;
-use App\Repository\UserProfileRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 
 final class RecordsViewService
 {
     public function __construct(
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly PersonalRecordRepository $recordRepository,
     ) {
     }
@@ -20,7 +20,7 @@ final class RecordsViewService
     public function build(): array
     {
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
 
             if (!$profile) {
                 return $this->emptyView();

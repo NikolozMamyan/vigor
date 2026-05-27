@@ -1,0 +1,292 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}VIGOR - Authentification{% endblock %}
+{% block body_class %}vigor-page flex justify-center items-center bg-black relative{% endblock %}
+
+{% block stylesheets %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .mesh-gradient-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 9999px;
+            mix-blend-mode: screen;
+            filter: blur(90px);
+            opacity: 0.15;
+            animation: authBlobMove 15s infinite alternate ease-in-out;
+        }
+
+        .auth-shell {
+            background: rgba(5, 5, 5, 0.8);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+
+        .auth-slider {
+            display: flex;
+            width: 200%;
+            transform: translateX({{ authMode|default('login') == 'register' ? '-50%' : '0' }});
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+        }
+
+        .auth-pane {
+            width: 50%;
+            flex-shrink: 0;
+            padding: 0 1.5rem;
+        }
+
+        .auth-floating {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .auth-floating:focus-within {
+            border-color: var(--app-accent);
+            background: rgba(204, 255, 0, 0.02);
+            box-shadow: 0 0 15px rgba(204, 255, 0, 0.1);
+        }
+
+        .auth-floating input {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            color: #fff;
+            outline: 0;
+            padding: 1.5rem 3.25rem 0.5rem 1rem;
+            font-weight: 700;
+        }
+
+        .auth-label {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--app-muted);
+            font-size: 0.875rem;
+            font-weight: 600;
+            pointer-events: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .auth-floating input:focus ~ .auth-label,
+        .auth-floating input:not(:placeholder-shown) ~ .auth-label {
+            top: 0.75rem;
+            transform: translateY(0);
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--app-accent);
+        }
+
+        .auth-stagger {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .auth-pane.active .auth-stagger {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .auth-delay-1 { transition-delay: 0.1s; }
+        .auth-delay-2 { transition-delay: 0.15s; }
+        .auth-delay-3 { transition-delay: 0.2s; }
+        .auth-delay-4 { transition-delay: 0.25s; }
+        .auth-delay-5 { transition-delay: 0.3s; }
+
+        @keyframes authBlobMove {
+            0% { transform: translate(-10%, -10%) scale(1); }
+            50% { transform: translate(30%, 20%) scale(1.2); }
+            100% { transform: translate(-20%, 40%) scale(0.9); }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {% set mode = authMode|default('login') %}
+
+    <div class="mesh-gradient-bg">
+        <div class="blob bg-lime-500 -top-10 -left-10"></div>
+        <div class="blob bg-emerald-600 bottom-0 right-0" style="animation-delay: -5s;"></div>
+        <div class="blob bg-cyan-700 top-1/2 left-1/2 -translate-x-1/2" style="animation-delay: -2s;"></div>
+    </div>
+
+    <main class="auth-shell w-full max-w-md h-[100dvh] sm:h-[85vh] sm:rounded-[2.5rem] relative flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.8)] border-x sm:border border-white/10 z-10 overflow-hidden">
+        <header class="pt-12 pb-6 px-6 flex items-center justify-center relative z-20">
+            <div class="flex flex-col items-center gap-2">
+                <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center shadow-[0_0_15px_rgba(204,255,0,0.15)]">
+                    <i data-lucide="dumbbell" class="text-app-accent w-6 h-6"></i>
+                </div>
+                <span class="font-black text-xl tracking-widest text-white mt-1">VIG<span class="text-app-accent">OR</span></span>
+            </div>
+        </header>
+
+        <div class="flex-1 relative overflow-hidden flex flex-col justify-center">
+            <div id="auth-slider" class="auth-slider">
+                <div id="login-pane" class="auth-pane {{ mode == 'register' ? '' : 'active' }}">
+                    <div class="mb-8 text-center auth-stagger auth-delay-1">
+                        <h1 class="text-3xl font-black text-white tracking-tight">Bon retour.</h1>
+                        <p class="text-sm text-app-muted mt-2 font-medium">Pret a exploser tes records aujourd'hui ?</p>
+                    </div>
+
+                    <form method="post" action="{{ path('auth_login') }}" class="space-y-4">
+                        <div class="auth-floating rounded-2xl relative overflow-hidden auth-stagger auth-delay-2">
+                            <input type="email" id="login-email" name="email" value="{{ email|default('') }}" placeholder=" " required autocomplete="email">
+                            <label for="login-email" class="auth-label">Adresse Email</label>
+                            <i data-lucide="mail" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-app-muted pointer-events-none"></i>
+                        </div>
+
+                        <div class="auth-floating rounded-2xl relative overflow-hidden auth-stagger auth-delay-3">
+                            <input type="password" id="login-pass" name="password" placeholder=" " required autocomplete="current-password">
+                            <label for="login-pass" class="auth-label">Mot de passe</label>
+                            <button type="button" data-password-toggle="login-pass" class="absolute right-4 top-1/2 -translate-y-1/2 text-app-muted hover:text-white transition-colors" aria-label="Afficher le mot de passe">
+                                <i data-lucide="eye" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex justify-end auth-stagger auth-delay-3">
+                            <button type="button" class="text-[11px] font-bold text-app-accent hover:text-white transition-colors tracking-wide">Mot de passe oublie ?</button>
+                        </div>
+
+                        {% if error %}
+                            <p class="text-xs font-bold text-rose-400 auth-stagger auth-delay-3">{{ error }}</p>
+                        {% endif %}
+
+                        <div class="pt-2 auth-stagger auth-delay-4">
+                            <button type="submit" class="w-full bg-app-accent text-black font-black text-sm uppercase tracking-widest py-4 rounded-2xl btn-press shadow-neon">
+                                Se connecter
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-8 mb-6 flex items-center gap-4 auth-stagger auth-delay-4">
+                        <div class="h-px bg-white/10 flex-1"></div>
+                        <span class="text-[10px] text-app-muted font-bold uppercase tracking-widest">Ou continuer avec</span>
+                        <div class="h-px bg-white/10 flex-1"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 auth-stagger auth-delay-5">
+                        <button type="button" class="glass-panel py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/5 transition-colors btn-press opacity-70">
+                            <i data-lucide="badge-check" class="w-4 h-4 text-white"></i>
+                            <span class="text-xs font-bold text-white">Google</span>
+                        </button>
+                        <button type="button" class="glass-panel py-3.5 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/5 transition-colors btn-press opacity-70">
+                            <i data-lucide="smartphone" class="w-4 h-4 text-white"></i>
+                            <span class="text-xs font-bold text-white">Apple</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 text-center auth-stagger auth-delay-5">
+                        <p class="text-xs text-app-muted font-medium">Nouveau ici ?
+                            <button type="button" data-auth-switch="register" class="text-white font-bold hover:text-app-accent transition-colors ml-1 border-b border-app-accent/30 pb-0.5">Creer un compte</button>
+                        </p>
+                    </div>
+                </div>
+
+                <div id="register-pane" class="auth-pane {{ mode == 'register' ? 'active' : '' }}">
+                    <div class="mb-8 text-center auth-stagger auth-delay-1">
+                        <h1 class="text-3xl font-black text-white tracking-tight">Rejoins l'elite.</h1>
+                        <p class="text-sm text-app-muted mt-2 font-medium">Commence ta transformation des aujourd'hui.</p>
+                    </div>
+
+                    <form method="post" action="{{ path('auth_register') }}" class="space-y-4">
+                        <div class="auth-floating rounded-2xl relative overflow-hidden auth-stagger auth-delay-2">
+                            <input type="text" id="reg-name" name="displayName" value="{{ displayName|default('') }}" placeholder=" " required autocomplete="name">
+                            <label for="reg-name" class="auth-label">Pseudo Athlete</label>
+                            <i data-lucide="user" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-app-muted pointer-events-none"></i>
+                        </div>
+
+                        <div class="auth-floating rounded-2xl relative overflow-hidden auth-stagger auth-delay-3">
+                            <input type="email" id="reg-email" name="email" value="{{ registerEmail|default('') }}" placeholder=" " required autocomplete="email">
+                            <label for="reg-email" class="auth-label">Adresse Email</label>
+                            <i data-lucide="mail" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-app-muted pointer-events-none"></i>
+                        </div>
+
+                        <div class="auth-floating rounded-2xl relative overflow-hidden auth-stagger auth-delay-4">
+                            <input type="password" id="reg-pass" name="password" placeholder=" " required autocomplete="new-password">
+                            <label for="reg-pass" class="auth-label">Mot de passe</label>
+                            <button type="button" data-password-toggle="reg-pass" class="absolute right-4 top-1/2 -translate-y-1/2 text-app-muted hover:text-white transition-colors" aria-label="Afficher le mot de passe">
+                                <i data-lucide="eye" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        {% if registerError %}
+                            <p class="text-xs font-bold text-rose-400 auth-stagger auth-delay-4">{{ registerError }}</p>
+                        {% endif %}
+
+                        <div class="pt-4 auth-stagger auth-delay-5">
+                            <button type="submit" class="w-full bg-white text-black font-black text-sm uppercase tracking-widest py-4 rounded-2xl btn-press shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                                Creer mon compte
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-8 text-center auth-stagger auth-delay-5">
+                        <p class="text-xs text-app-muted font-medium">Deja membre de l'elite ?
+                            <button type="button" data-auth-switch="login" class="text-white font-bold hover:text-app-accent transition-colors ml-1 border-b border-app-accent/30 pb-0.5">Se connecter</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 inset-x-0 h-1 bg-white/5">
+            <div id="auth-progress-bar" class="h-full w-1/2 bg-app-accent transition-transform duration-500" style="transform: translateX({{ mode == 'register' ? '100%' : '0' }});"></div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('auth-slider');
+            const loginPane = document.getElementById('login-pane');
+            const registerPane = document.getElementById('register-pane');
+            const progressBar = document.getElementById('auth-progress-bar');
+
+            const switchMode = (mode) => {
+                if (navigator.vibrate) {
+                    navigator.vibrate(20);
+                }
+
+                const register = mode === 'register';
+                slider.style.transform = register ? 'translateX(-50%)' : 'translateX(0)';
+                loginPane.classList.toggle('active', !register);
+                registerPane.classList.toggle('active', register);
+                progressBar.style.transform = register ? 'translateX(100%)' : 'translateX(0)';
+            };
+
+            document.querySelectorAll('[data-auth-switch]').forEach((button) => {
+                button.addEventListener('click', () => switchMode(button.dataset.authSwitch));
+            });
+
+            document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const input = document.getElementById(button.dataset.passwordToggle);
+                    const icon = button.querySelector('i');
+                    const nextType = input.type === 'password' ? 'text' : 'password';
+                    input.type = nextType;
+                    icon.setAttribute('data-lucide', nextType === 'password' ? 'eye' : 'eye-off');
+
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                });
+            });
+
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        });
+    </script>
+{% endblock %}

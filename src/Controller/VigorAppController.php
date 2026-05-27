@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Service\Dashboard\DashboardService;
 use App\Service\Exercise\ExerciseCatalogService;
+use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Profile\ProfileStatsService;
 use App\Service\Records\RecordsViewService;
 use App\Service\Stats\StatsAnalyticsService;
@@ -24,9 +25,14 @@ final class VigorAppController extends AbstractController
         ProfileStatsService $profileStatsService,
         RecordsViewService $recordsViewService,
         StatsAnalyticsService $statsAnalyticsService,
+        CurrentUserProfileProvider $currentUser,
         Request $request,
         string $view = 'home',
     ): Response {
+        if (!$currentUser->getProfile()) {
+            return $this->redirectToRoute('auth_login');
+        }
+
         $dashboard = $dashboardService->build();
         $exerciseCatalog = $exerciseCatalogService->build();
         $activeWorkout = $activeWorkoutViewService->build((int) $request->query->get('exercise', 0));

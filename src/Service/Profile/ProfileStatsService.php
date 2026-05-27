@@ -4,15 +4,15 @@ namespace App\Service\Profile;
 
 use App\Entity\UserProfile;
 use App\Repository\PersonalRecordRepository;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Repository\WorkoutSetRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Dashboard\WeeklyGoalService;
 
 final class ProfileStatsService
 {
     public function __construct(
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly WorkoutSessionRepository $sessionRepository,
         private readonly WorkoutSetRepository $setRepository,
         private readonly PersonalRecordRepository $recordRepository,
@@ -26,7 +26,7 @@ final class ProfileStatsService
     public function build(): array
     {
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
 
             if (!$profile) {
                 return $this->fallback();

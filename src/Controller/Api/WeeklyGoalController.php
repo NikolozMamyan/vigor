@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Repository\UserProfileRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Dashboard\WeeklyGoalService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,13 +12,13 @@ use Symfony\Component\Routing\Attribute\Route;
 final class WeeklyGoalController extends AbstractController
 {
     #[Route('/api/profile/weekly-goal', name: 'api_profile_weekly_goal_update', methods: ['PATCH'])]
-    public function update(Request $request, UserProfileRepository $profileRepository, WeeklyGoalService $weeklyGoalService): JsonResponse
+    public function update(Request $request, CurrentUserProfileProvider $currentUser, WeeklyGoalService $weeklyGoalService): JsonResponse
     {
         try {
-            $profile = $profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $currentUser->getProfile();
 
             if (!$profile) {
-                return $this->json(['error' => 'Profile not found.'], JsonResponse::HTTP_NOT_FOUND);
+                return $this->json(['error' => 'Authentication required.'], JsonResponse::HTTP_UNAUTHORIZED);
             }
 
             $payload = json_decode($request->getContent() ?: '{}', true, 512, \JSON_THROW_ON_ERROR);

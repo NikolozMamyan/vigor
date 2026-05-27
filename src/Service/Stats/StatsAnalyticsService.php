@@ -6,13 +6,13 @@ use App\Entity\PersonalRecord;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutSet;
 use App\Repository\PersonalRecordRepository;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutSetRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 
 final class StatsAnalyticsService
 {
     public function __construct(
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly WorkoutSetRepository $setRepository,
         private readonly PersonalRecordRepository $recordRepository,
     ) {
@@ -25,7 +25,7 @@ final class StatsAnalyticsService
     {
         try {
             $now ??= new \DateTimeImmutable();
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
 
             if (!$profile) {
                 return $this->fallback($period);

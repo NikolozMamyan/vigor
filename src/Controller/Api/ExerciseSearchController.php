@@ -3,7 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Service\Exercise\ExerciseCatalogService;
-use App\Repository\UserProfileRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,13 +31,13 @@ final class ExerciseSearchController extends AbstractController
     #[Route('/api/exercises/custom', name: 'api_exercises_create_custom', methods: ['POST'])]
     public function createCustom(
         Request $request,
-        UserProfileRepository $profileRepository,
+        CurrentUserProfileProvider $currentUser,
         ExerciseCatalogService $exerciseCatalogService,
     ): JsonResponse {
-        $profile = $profileRepository->findOneBy(['username' => 'alexvigor']);
+        $profile = $currentUser->getProfile();
 
         if (!$profile) {
-            return $this->json(['error' => 'Profile not found.'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Authentication required.'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
         try {

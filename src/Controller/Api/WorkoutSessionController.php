@@ -5,8 +5,8 @@ namespace App\Controller\Api;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
 use App\Repository\ExerciseRepository;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutSetRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Workout\WorkoutSessionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,14 +17,14 @@ final class WorkoutSessionController extends AbstractController
 {
     #[Route('/api/workout-sessions/free', name: 'api_workout_sessions_start_free', methods: ['POST'])]
     public function startFree(
-        UserProfileRepository $profileRepository,
+        CurrentUserProfileProvider $currentUser,
         ExerciseRepository $exerciseRepository,
         WorkoutSessionService $sessionService,
     ): JsonResponse {
-        $profile = $profileRepository->findOneBy(['username' => 'alexvigor']);
+        $profile = $currentUser->getProfile();
 
         if (!$profile) {
-            return $this->json(['error' => 'Profile not found.'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Authentication required.'], JsonResponse::HTTP_UNAUTHORIZED);
         }
 
         $exercise = $exerciseRepository->findDefaultForProfile($profile);

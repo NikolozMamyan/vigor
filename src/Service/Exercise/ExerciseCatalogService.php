@@ -5,7 +5,7 @@ namespace App\Service\Exercise;
 use App\Entity\Exercise;
 use App\Entity\UserProfile;
 use App\Repository\ExerciseRepository;
-use App\Repository\UserProfileRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 
@@ -13,7 +13,7 @@ final class ExerciseCatalogService
 {
     public function __construct(
         private readonly ExerciseRepository $exerciseRepository,
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -24,7 +24,7 @@ final class ExerciseCatalogService
     public function build(): array
     {
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
             $exercises = $this->exerciseRepository->findCatalogForProfile($profile);
 
             return [
@@ -44,14 +44,20 @@ final class ExerciseCatalogService
         $query = trim($query);
 
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
             $exercises = '' === $query
                 ? $this->exerciseRepository->findCatalogForProfile($profile)
                 : $this->exerciseRepository->searchForProfile($query, $profile);
 
             return array_map(fn (Exercise $exercise): array => $this->normalizeExercise($exercise), $exercises);
         } catch (\Throwable) {
-            return [];
+            $fallbackExercises = $this->fallback()['exercises'];
+
+            if ('' === $query) {
+                return $fallbackExercises;
+            }
+
+            return array_values(array_filter($fallbackExercises, static fn (array $exercise): bool => str_contains(mb_strtolower($exercise['name'].' '.$exercise['category'].' '.$exercise['tag']), mb_strtolower($query))));
         }
     }
 
@@ -170,8 +176,29 @@ final class ExerciseCatalogService
         return [
             'categories' => [
                 ['label' => 'Populaires', 'icon' => 'flame', 'active' => true],
+                ['label' => 'Jambes', 'icon' => 'footprints', 'active' => false],
+                ['label' => 'Accessoires', 'icon' => 'circle-dot', 'active' => false],
             ],
-            'exercises' => [],
+            'exercises' => [
+                [
+                    'id' => 1,
+                    'name' => 'Squat',
+                    'category' => 'Jambes',
+                    'tag' => 'Barre',
+                    'image' => 'https://placehold.co/600x400/18181b/ccff00?text=Squat',
+                    'source' => Exercise::SOURCE_VIGOR,
+                    'isCustom' => false,
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Curl elastique',
+                    'category' => 'Accessoires',
+                    'tag' => 'Elastique',
+                    'image' => 'https://placehold.co/600x400/18181b/ccff00?text=Custom',
+                    'source' => Exercise::SOURCE_CUSTOM,
+                    'isCustom' => true,
+                ],
+            ],
         ];
     }
 }

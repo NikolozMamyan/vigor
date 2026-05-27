@@ -17,7 +17,13 @@ class UserProfile
     private string $displayName = 'Alex';
 
     #[ORM\Column(length: 60, unique: true)]
-    private string $username = 'alexvigor';
+    private string $username = '';
+
+    #[ORM\Column(length: 180, unique: true)]
+    private string $email = '';
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $passwordHash = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $avatarUrl = null;
@@ -67,6 +73,30 @@ class UserProfile
     public function setUsername(string $username): self
     {
         $this->username = $username;
+
+        return $this;
+    }
+
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): self
+    {
+        $this->email = mb_strtolower(trim($email));
+
+        return $this;
+    }
+
+    public function getPasswordHash(): ?string
+    {
+        return $this->passwordHash;
+    }
+
+    public function setPasswordHash(?string $passwordHash): self
+    {
+        $this->passwordHash = $passwordHash;
 
         return $this;
     }

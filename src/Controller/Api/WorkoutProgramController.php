@@ -4,8 +4,8 @@ namespace App\Controller\Api;
 
 use App\Entity\WorkoutProgram;
 use App\Repository\ExerciseRepository;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutProgramExerciseRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Workout\WorkoutProgramService;
 use App\Service\Workout\WorkoutSessionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,16 +18,16 @@ final class WorkoutProgramController extends AbstractController
     #[Route('/api/workout-programs', name: 'api_workout_programs_create', methods: ['POST'])]
     public function create(
         Request $request,
-        UserProfileRepository $profileRepository,
+        CurrentUserProfileProvider $currentUser,
         ExerciseRepository $exerciseRepository,
         WorkoutProgramService $programService,
         WorkoutProgramExerciseRepository $programExerciseRepository,
     ): JsonResponse {
         try {
-            $profile = $profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $currentUser->getProfile();
 
             if (!$profile) {
-                return $this->json(['error' => 'Profile not found.'], JsonResponse::HTTP_NOT_FOUND);
+                return $this->json(['error' => 'Authentication required.'], JsonResponse::HTTP_UNAUTHORIZED);
             }
 
             $exercise = $exerciseRepository->findDefaultForProfile($profile);

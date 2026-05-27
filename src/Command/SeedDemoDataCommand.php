@@ -65,12 +65,22 @@ final class SeedDemoDataCommand extends Command
         $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
 
         if ($profile) {
+            if (!$profile->getEmail()) {
+                $profile->setEmail('alex@vigor.local');
+            }
+
+            if (!$profile->getPasswordHash()) {
+                $profile->setPasswordHash(password_hash('vigor', PASSWORD_DEFAULT));
+            }
+
             return $profile;
         }
 
         $profile = (new UserProfile())
             ->setDisplayName('Alex')
             ->setUsername('alexvigor')
+            ->setEmail('alex@vigor.local')
+            ->setPasswordHash(password_hash('vigor', PASSWORD_DEFAULT))
             ->setAvatarUrl('https://placehold.co/200x200/18181b/ccff00?text=AX')
             ->setJoinedAt(new \DateTimeImmutable('2025-01-08 09:00:00'))
             ->setWeeklyWorkoutGoal(4)

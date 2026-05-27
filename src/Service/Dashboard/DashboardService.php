@@ -5,14 +5,14 @@ namespace App\Service\Dashboard;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
 use App\Repository\PersonalRecordRepository;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Repository\WorkoutSetRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 
 final class DashboardService
 {
     public function __construct(
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly WorkoutSetRepository $setRepository,
         private readonly PersonalRecordRepository $recordRepository,
         private readonly WorkoutSessionRepository $sessionRepository,
@@ -26,7 +26,7 @@ final class DashboardService
     public function build(): array
     {
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
 
             if (!$profile) {
                 return $this->fallback();

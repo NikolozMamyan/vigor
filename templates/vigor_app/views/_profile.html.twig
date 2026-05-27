@@ -78,6 +78,18 @@
                 <i data-lucide="chevron-right" class="w-4 h-4 text-app-muted"></i>
             </button>
         {% endfor %}
+        <form method="post" action="{{ path('auth_logout') }}">
+            <button type="submit" class="w-full flex items-center gap-4 p-4 hover:bg-rose-500/10 transition-colors text-left">
+                <span class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                    <i data-lucide="log-out" class="w-5 h-5 text-rose-400"></i>
+                </span>
+                <span class="flex-1">
+                    <span class="block text-sm font-bold text-white">Deconnexion</span>
+                    <span class="block text-[10px] text-app-muted">Fermer la session sur cet appareil</span>
+                </span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-app-muted"></i>
+            </button>
+        </form>
     </div>
 
     <div class="fixed inset-0 z-[110] opacity-0 pointer-events-none transition-all duration-300 flex items-end justify-center" data-weekly-goal-target="modal">

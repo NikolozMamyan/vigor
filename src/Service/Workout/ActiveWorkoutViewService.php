@@ -3,17 +3,17 @@
 namespace App\Service\Workout;
 
 use App\Entity\WorkoutSet;
-use App\Repository\UserProfileRepository;
 use App\Repository\WorkoutProgramExerciseRepository;
 use App\Repository\WorkoutProgramRepository;
 use App\Repository\WorkoutSessionExerciseRepository;
 use App\Repository\WorkoutSessionRepository;
 use App\Repository\WorkoutSetRepository;
+use App\Service\Auth\CurrentUserProfileProvider;
 
 final class ActiveWorkoutViewService
 {
     public function __construct(
-        private readonly UserProfileRepository $profileRepository,
+        private readonly CurrentUserProfileProvider $currentUser,
         private readonly WorkoutSessionRepository $sessionRepository,
         private readonly WorkoutSessionExerciseRepository $sessionExerciseRepository,
         private readonly WorkoutSetRepository $setRepository,
@@ -28,7 +28,7 @@ final class ActiveWorkoutViewService
     public function build(?int $preferredSessionExerciseId = null): array
     {
         try {
-            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+            $profile = $this->currentUser->getProfile();
 
             if (!$profile) {
                 return $this->emptyState();
@@ -257,7 +257,11 @@ final class ActiveWorkoutViewService
             'titleLines' => ['Aucune seance', 'active'],
             'image' => 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
             'targetLabel' => '3 x 8-10',
-            'sets' => [],
+            'sets' => [
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 1, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 2, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],
+                ['id' => null, 'sessionExerciseId' => null, 'number' => 3, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],
+            ],
             'programs' => [],
         ];
     }
