@@ -2,6 +2,9 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     static targets = ['modal', 'surface', 'minified', 'expanded', 'display', 'miniDisplay', 'canvas'];
+    static values = {
+        soundUrl: String,
+    };
 
     connect() {
         this.totalTime = 90;
@@ -12,6 +15,11 @@ export default class extends Controller {
         this.particles = [];
         this.particleFrame = null;
         this.canvasContext = this.hasCanvasTarget ? this.canvasTarget.getContext('2d') : null;
+        this.sound = this.hasSoundUrlValue ? new Audio(this.soundUrlValue) : null;
+
+        if (this.sound) {
+            this.sound.preload = 'auto';
+        }
 
         this.boundWorkoutSetTimerStart = (event) => this.startFromSet(event);
         this.boundWorkoutSetTimerClose = () => this.close();
@@ -173,6 +181,7 @@ export default class extends Controller {
         this.timeLeft = 0;
         this.update();
         this.modalTarget.classList.add('is-triggered');
+        this.playFinishSound();
 
         if (shouldNotify) {
             this.notifyRestFinished();
@@ -237,6 +246,15 @@ export default class extends Controller {
             new Notification(notification.title, options);
         } catch {
         }
+    }
+
+    playFinishSound() {
+        if (!this.sound) {
+            return;
+        }
+
+        this.sound.currentTime = 0;
+        this.sound.play().catch(() => {});
     }
 
     update() {

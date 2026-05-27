@@ -118,5 +118,5 @@ function staleWhileRevalidate(request) {
 }
 
 function isCacheableAsset(request) {
-    return ['style', 'script', 'worker', 'font', 'image'].includes(request.destination);
+    return ['style', 'script', 'worker', 'font', 'image', 'audio'].includes(request.destination);
 }
