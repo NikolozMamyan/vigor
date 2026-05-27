@@ -58,7 +58,10 @@ export default class extends Controller {
         }
 
         this.element.classList.add('is-syncing');
-        this.element.dispatchEvent(new CustomEvent('workout-set:timer-start', { bubbles: true }));
+        this.element.dispatchEvent(new CustomEvent('workout-set:timer-start', {
+            detail: this.timerDetail(),
+            bubbles: true,
+        }));
 
         const set = await this.ensureSet(payload);
 
@@ -165,6 +168,24 @@ export default class extends Controller {
         this.element.classList.remove('border-rose-500/50');
 
         return { weight, reps };
+    }
+
+    timerDetail() {
+        const workoutView = this.element.closest('[data-controller~="active-workout"]');
+        const exerciseTitle = workoutView?.querySelector('[data-active-workout-target="headerSubtitle"]')?.textContent?.trim()
+            || workoutView?.querySelector('[data-active-workout-target="headerTitle"]')?.textContent?.trim()
+            || 'Seance en cours';
+        const nextSet = this.element.nextElementSibling?.matches('[data-controller~="workout-set"]')
+            ? this.element.nextElementSibling
+            : null;
+        const nextPosition = nextSet?.dataset.workoutSetPositionValue;
+        const nextLabel = nextPosition ? `Prochain set : serie ${nextPosition}` : 'Passe a la suite de ta seance';
+
+        return {
+            notificationTitle: 'Repos termine',
+            notificationBody: `${nextLabel} - ${exerciseTitle}`,
+            url: '/app/workout',
+        };
     }
 
     async request(url, method, payload = null) {

@@ -13,7 +13,7 @@ export default class extends Controller {
         this.particleFrame = null;
         this.canvasContext = this.hasCanvasTarget ? this.canvasTarget.getContext('2d') : null;
 
-        this.boundWorkoutSetTimerStart = () => this.startFromSet();
+        this.boundWorkoutSetTimerStart = (event) => this.startFromSet(event);
         this.boundWorkoutSetTimerClose = () => this.close();
         this.boundResizeCanvas = () => this.resizeCanvas();
 
@@ -34,25 +34,35 @@ export default class extends Controller {
         window.removeEventListener('resize', this.boundResizeCanvas);
     }
 
-    startFromSet() {
+    startFromSet(event = null) {
         if (navigator.vibrate) {
             navigator.vibrate(50);
         }
 
-        this.start();
+        const detail = event?.detail || {};
+        this.notificationContext = {
+            title: detail.notificationTitle || 'Repos termine',
+            body: detail.notificationBody || 'Ton prochain set est pret.',
+            url: detail.url || '/app/workout',
+        };
+
+        this.requestNotificationPermission();
+        this.start(detail.restSeconds || 90);
     }
 
     start(seconds = 90) {
         window.clearInterval(this.interval);
         this.totalTime = Number.parseInt(seconds, 10) || 90;
         this.timeLeft = this.totalTime;
+        this.endsAt = Date.now() + this.totalTime * 1000;
+        this.notified = false;
         this.active = true;
         this.update();
         this.show();
         this.expand();
 
         this.interval = window.setInterval(() => {
-            this.timeLeft -= 1;
+            this.timeLeft = Math.ceil((this.endsAt - Date.now()) / 1000);
             this.update();
 
             if (this.timeLeft <= 0) {
@@ -127,7 +137,7 @@ export default class extends Controller {
 
     skip() {
         this.timeLeft = 0;
-        this.finish();
+        this.finish(false);
     }
 
     addTime() {
@@ -141,6 +151,7 @@ export default class extends Controller {
     adjustTime(seconds) {
         this.timeLeft = Math.max(0, this.timeLeft + seconds);
         this.totalTime = Math.max(this.totalTime, this.timeLeft);
+        this.endsAt = Date.now() + this.timeLeft * 1000;
         this.update();
 
         if (navigator.vibrate) {
@@ -148,11 +159,11 @@ export default class extends Controller {
         }
 
         if (this.timeLeft <= 0) {
-            this.finish();
+            this.finish(false);
         }
     }
 
-    finish() {
+    finish(shouldNotify = true) {
         if (!this.active) {
             return;
         }
@@ -163,6 +174,10 @@ export default class extends Controller {
         this.update();
         this.modalTarget.classList.add('is-triggered');
 
+        if (shouldNotify) {
+            this.notifyRestFinished();
+        }
+
         if (navigator.vibrate) {
             navigator.vibrate([150, 80, 250, 100, 650]);
         }
@@ -172,6 +187,56 @@ export default class extends Controller {
         window.setTimeout(() => {
             this.close();
         }, 2000);
+    }
+
+    async requestNotificationPermission() {
+        if (!('Notification' in window) || Notification.permission !== 'default') {
+            return;
+        }
+
+        try {
+            await Notification.requestPermission();
+        } catch {
+        }
+    }
+
+    async notifyRestFinished() {
+        if (this.notified || !('Notification' in window) || Notification.permission !== 'granted') {
+            return;
+        }
+
+        this.notified = true;
+
+        const notification = this.notificationContext || {
+            title: 'Repos termine',
+            body: 'Ton prochain set est pret.',
+            url: '/app/workout',
+        };
+
+        const options = {
+            body: notification.body,
+            tag: 'vigor-rest-timer',
+            renotify: true,
+            silent: false,
+            icon: '/icons/vigor-icon-192.png',
+            badge: '/icons/vigor-icon-192.png',
+            data: { url: notification.url },
+        };
+
+        try {
+            const registration = await navigator.serviceWorker?.ready;
+
+            if (registration?.showNotification) {
+                await registration.showNotification(notification.title, options);
+                return;
+            }
+        } catch {
+        }
+
+        try {
+            new Notification(notification.title, options);
+        } catch {
+        }
     }
 
     update() {

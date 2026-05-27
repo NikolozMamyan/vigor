@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vigor-v3';
+const CACHE_NAME = 'vigor-v4';
 const APP_SHELL_URLS = [
     '/app',
     '/manifest.webmanifest',
@@ -52,6 +52,26 @@ self.addEventListener('fetch', (event) => {
 
     event.respondWith(
         staleWhileRevalidate(request),
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const targetUrl = event.notification.data?.url || '/app/workout';
+    const url = new URL(targetUrl, self.location.origin).href;
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.navigate(url);
+                    return client.focus();
+                }
+            }
+
+            return self.clients.openWindow(url);
+        }),
     );
 });
 
