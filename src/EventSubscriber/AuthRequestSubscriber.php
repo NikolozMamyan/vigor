@@ -57,7 +57,7 @@ final class AuthRequestSubscriber implements EventSubscriberInterface
 
     private function requiresAuthentication(string $path): bool
     {
-        return '/' === $path || str_starts_with($path, '/app') || str_starts_with($path, '/api/');
+        return '/' === $path || str_starts_with($path, '/app') || str_starts_with($path, '/admin') || str_starts_with($path, '/api/');
     }
 
     private function isPublic(string $path, string $method): bool

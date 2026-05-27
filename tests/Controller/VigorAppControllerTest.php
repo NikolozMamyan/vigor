@@ -57,4 +57,12 @@ final class VigorAppControllerTest extends WebTestCase
 
         self::assertResponseRedirects('/login');
     }
+
+    public function testAdminExerciseRouteRedirectsAnonymousUserToLogin(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/admin/exercises');
+
+        self::assertResponseRedirects('/login');
+    }
 }
