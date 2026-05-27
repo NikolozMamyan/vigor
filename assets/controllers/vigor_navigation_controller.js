@@ -18,6 +18,7 @@ export default class extends Controller {
         this.boundPointerUp = (event) => this.endPointerSwipe(event);
         this.boundPointerCancel = () => this.cancelSwipe();
         this.boundPopState = (event) => this.show(event.state?.view || this.viewFromPath() || 'home', false);
+        this.boundRefreshViews = (event) => this.refreshViews(event.detail || {});
 
         this.element.addEventListener('touchstart', this.boundTouchStart, { passive: true });
         this.element.addEventListener('touchmove', this.boundTouchMove, { passive: false });
@@ -28,6 +29,7 @@ export default class extends Controller {
         this.element.addEventListener('pointerup', this.boundPointerUp);
         this.element.addEventListener('pointercancel', this.boundPointerCancel);
         window.addEventListener('popstate', this.boundPopState);
+        this.element.addEventListener('vigor:refresh-views', this.boundRefreshViews);
 
         this.show(this.activeValue || 'home', false);
         window.setTimeout(() => this.animateRings(), 300);
@@ -43,6 +45,7 @@ export default class extends Controller {
         this.element.removeEventListener('pointerup', this.boundPointerUp);
         this.element.removeEventListener('pointercancel', this.boundPointerCancel);
         window.removeEventListener('popstate', this.boundPopState);
+        this.element.removeEventListener('vigor:refresh-views', this.boundRefreshViews);
     }
 
     navigate(event) {
@@ -54,6 +57,7 @@ export default class extends Controller {
     }
 
     show(view, pushState) {
+        const previousView = this.activeValue;
         this.activeValue = view;
 
         this.viewTargets.forEach((element) => {
@@ -79,6 +83,10 @@ export default class extends Controller {
 
         if (pushState) {
             window.history.pushState({ view }, '', `/app/${view}`);
+        }
+
+        if (view !== previousView) {
+            this.resetMainScroll();
         }
 
         this.element.dispatchEvent(new CustomEvent('vigor:navigate', {
@@ -410,6 +418,77 @@ export default class extends Controller {
 
         if (this.hasInnerRingTarget) {
             this.innerRingTarget.style.strokeDashoffset = '90';
+        }
+    }
+
+    async refreshViews({ views = [], nextView = null, path = null } = {}) {
+        const requestedViews = Array.isArray(views) && views.length > 0 ? views : [this.activeValue];
+        const uniqueViews = [...new Set(requestedViews.filter((view) => this.views.includes(view)))];
+        const targetView = nextView && this.views.includes(nextView) ? nextView : this.activeValue;
+
+        if (uniqueViews.length === 0) {
+            if (targetView) {
+                this.show(targetView, false);
+            }
+
+            return;
+        }
+
+        this.setRefreshing(uniqueViews, true);
+
+        try {
+            const response = await fetch(path || `/app/${targetView}`, {
+                headers: { Accept: 'text/html' },
+                cache: 'no-store',
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const html = await response.text();
+            const documentFragment = new DOMParser().parseFromString(html, 'text/html');
+
+            uniqueViews.forEach((view) => {
+                const incoming = documentFragment.getElementById(`view-${view}`);
+                const current = this.viewTargets.find((element) => element.dataset.view === view);
+
+                if (!incoming || !current) {
+                    return;
+                }
+
+                incoming.classList.toggle('active', view === targetView);
+                current.replaceWith(incoming);
+            });
+
+            this.show(targetView, false);
+
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        } finally {
+            this.setRefreshing(uniqueViews, false);
+        }
+    }
+
+    setRefreshing(views, refreshing) {
+        views.forEach((view) => {
+            const element = this.viewTargets.find((target) => target.dataset.view === view);
+
+            if (!element) {
+                return;
+            }
+
+            element.classList.toggle('view-refreshing', refreshing);
+            element.setAttribute('aria-busy', refreshing ? 'true' : 'false');
+        });
+    }
+
+    resetMainScroll() {
+        const scroller = this.element.querySelector('.app-main');
+
+        if (scroller) {
+            scroller.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         }
     }
 }

@@ -1,9 +1,6 @@
-const CACHE_NAME = 'vigor-v1';
+const CACHE_NAME = 'vigor-v2';
 const APP_SHELL_URLS = [
     '/app',
-    '/app/workout',
-    '/app/library',
-    '/app/profile',
     '/manifest.webmanifest',
     '/icons/vigor-icon.svg',
     '/icons/vigor-icon-192.png',
@@ -40,27 +37,21 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (request.mode === 'navigate') {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    const copy = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        event.respondWith(networkFirstPage(request));
+        return;
+    }
 
-                    return response;
-                })
-                .catch(() => caches.match(request).then((response) => response || caches.match('/app'))),
-        );
+    if (url.pathname === '/manifest.webmanifest') {
+        event.respondWith(networkFirst(request));
+        return;
+    }
+
+    if (!isCacheableAsset(request)) {
         return;
     }
 
     event.respondWith(
-        caches.match(request)
-            .then((cached) => cached || fetch(request).then((response) => {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-
-                return response;
-            })),
+        staleWhileRevalidate(request),
     );
 });
 
@@ -73,4 +64,28 @@ function networkFirst(request) {
             return response;
         })
         .catch(() => caches.match(request));
+}
+
+function networkFirstPage(request) {
+    return fetch(request, { cache: 'no-store' })
+        .catch(() => caches.match('/app'));
+}
+
+function staleWhileRevalidate(request) {
+    return caches.match(request).then((cached) => {
+        const networkPromise = fetch(request).then((response) => {
+            if (response.ok) {
+                const copy = response.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            }
+
+            return response;
+        });
+
+        return cached || networkPromise;
+    });
+}
+
+function isCacheableAsset(request) {
+    return ['style', 'script', 'worker', 'font', 'image'].includes(request.destination);
 }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\Nikoloz\\\\Desktop\\\\Co-NM\\\\Vigor\" -name \"*fixture*\" -o -name \"*Fixture*\" 2>nul)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Nikoloz\\Desktop\\Co-NM\\Vigor"
+    ]
+  }
+}

@@ -119,6 +119,9 @@ final class ExerciseCatalogService
             'Bras' => 'dumbbell',
             'Jambes' => 'footprints',
             'Epaules' => 'hexagon',
+            'Fessiers' => 'circle',
+            'Abdominaux' => 'layers',
+            'Mollets' => 'footprints',
         ];
 
         foreach ($exercises as $exercise) {
