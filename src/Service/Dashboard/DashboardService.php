@@ -172,10 +172,18 @@ final class DashboardService
     private function buildRecentRecords(UserProfile $profile): array
     {
         $records = [];
+        $seenExerciseIds = [];
 
-        foreach ($this->recordRepository->findRecentForProfile($profile, 6) as $index => $record) {
+        foreach ($this->recordRepository->findRecentForProfile($profile, 20) as $record) {
+            $exerciseId = $record->getExercise()->getId();
+
+            if (null !== $exerciseId && \in_array($exerciseId, $seenExerciseIds, true)) {
+                continue;
+            }
+
             $set = $record->getWorkoutSet();
             $gain = $record->getPreviousValue() ? $record->getValue() - $record->getPreviousValue() : 0;
+            $seenExerciseIds[] = $exerciseId;
 
             $records[] = [
                 'exercise' => $record->getExercise()->getName(),
@@ -184,8 +192,12 @@ final class DashboardService
                 'date' => $this->relativeDateLabel($record->getAchievedAt()),
                 'gain' => $gain > 0 ? '+'.$this->formatNumber($gain).'kg' : 'NEW',
                 'previous' => $record->getPreviousValue() ? 'vs '.$this->formatNumber($record->getPreviousValue()).'kg 1RM' : '1RM estime',
-                'new' => 0 === $index,
+                'new' => 1 === \count($records),
             ];
+
+            if (4 === \count($records)) {
+                break;
+            }
         }
 
         return $records;

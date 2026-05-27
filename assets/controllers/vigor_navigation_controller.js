@@ -5,7 +5,7 @@ export default class extends Controller {
     static values = { active: String };
 
     connect() {
-        this.views = ['home', 'workout', 'library', 'stats', 'profile'];
+        this.views = ['home', 'workout', 'library', 'stats', 'records', 'profile'];
         this.swipe = null;
         this.previewView = null;
         this.refreshRequests = new Map();
@@ -409,7 +409,7 @@ export default class extends Controller {
     }
 
     viewFromPath() {
-        const match = window.location.pathname.match(/^\/app\/(home|workout|library|stats|profile)$/);
+        const match = window.location.pathname.match(/^\/app\/(home|workout|library|stats|records|profile)$/);
 
         return match ? match[1] : null;
     }

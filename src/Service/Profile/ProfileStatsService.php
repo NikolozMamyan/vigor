@@ -133,7 +133,9 @@ final class ProfileStatsService
                 'trainingMinutes' => ['current' => 0, 'target' => 180, 'percent' => 0],
             ],
             'badges' => [],
-            'settings' => [],
+            'settings' => [
+                ['label' => 'Objectif hebdo', 'description' => '4 seances - 14T', 'icon' => 'target'],
+            ],
         ];
     }
 }

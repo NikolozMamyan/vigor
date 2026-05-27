@@ -55,6 +55,27 @@ final class PersonalRecordRepository extends ServiceEntityRepository implements 
             ->getResult();
     }
 
+    /**
+     * @return list<PersonalRecord>
+     */
+    public function findForProfileByMetric(UserProfile $profile, string $metric, int $limit = 100): array
+    {
+        return $this->createQueryBuilder('record')
+            ->join('record.workoutSet', 'workoutSet')
+            ->join('workoutSet.sessionExercise', 'sessionExercise')
+            ->join('sessionExercise.session', 'session')
+            ->andWhere('record.profile = :profile')
+            ->andWhere('record.metric = :metric')
+            ->andWhere('session.status = :sessionStatus')
+            ->setParameter('profile', $profile)
+            ->setParameter('metric', $metric)
+            ->setParameter('sessionStatus', WorkoutSession::STATUS_COMPLETED)
+            ->orderBy('record.achievedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function countForProfile(UserProfile $profile): int
     {
         return (int) $this->createQueryBuilder('record')

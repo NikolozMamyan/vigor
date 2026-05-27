@@ -1,4 +1,4 @@
-<section id="view-profile" class="tab-content {{ activeView == 'profile' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="profile">
+<section id="view-profile" class="tab-content {{ activeView == 'profile' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="profile" data-controller="weekly-goal">
     <div class="pt-2 flex items-center justify-between">
         <div>
             <p class="text-[10px] text-app-muted uppercase font-black tracking-widest mb-1">Profil</p>
@@ -63,7 +63,11 @@
 
     <div class="glass-panel rounded-2xl overflow-hidden">
         {% for item in profileSettings %}
-            <button type="button" class="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5">
+            <button
+                type="button"
+                class="w-full flex items-center gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5"
+                {% if item.label == 'Objectif hebdo' %}data-action="weekly-goal#open"{% endif %}
+            >
                 <span class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                     <i data-lucide="{{ item.icon }}" class="w-5 h-5 text-white"></i>
                 </span>
@@ -74,5 +78,75 @@
                 <i data-lucide="chevron-right" class="w-4 h-4 text-app-muted"></i>
             </button>
         {% endfor %}
+    </div>
+
+    <div class="fixed inset-0 z-[110] opacity-0 pointer-events-none transition-all duration-300 flex items-end justify-center" data-weekly-goal-target="modal">
+        <button type="button" class="absolute inset-0 bg-black/85 backdrop-blur-xl w-full" data-action="weekly-goal#close" aria-label="Fermer la configuration des objectifs"></button>
+
+        <form class="weekly-goal-modal-panel relative z-20 w-full max-w-md translate-y-full scale-95 transition-transform duration-300 bg-[#09090b] border-t border-white/12 rounded-t-[2.5rem] shadow-[0_-24px_70px_rgba(0,0,0,0.85)] overflow-hidden" data-weekly-goal-target="form" data-action="submit->weekly-goal#save">
+            <div class="relative p-6 pb-5 border-b border-white/5 overflow-hidden">
+                <div class="absolute -right-10 -top-12 w-36 h-36 bg-app-accent/15 blur-[42px] rounded-full pointer-events-none"></div>
+                <div class="relative flex items-start justify-between gap-4">
+                    <div>
+                        <span class="text-[10px] text-app-accent uppercase font-black tracking-widest">Objectifs hebdo</span>
+                        <h3 class="text-2xl font-black text-white mt-1 leading-tight">Configurer ta semaine</h3>
+                        <p class="text-xs text-app-muted mt-2 leading-relaxed">Ces valeurs pilotent les cartes progression du profil et du dashboard.</p>
+                    </div>
+                    <button type="button" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-app-muted hover:text-white transition-colors shrink-0" data-action="weekly-goal#close" aria-label="Fermer">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <label class="goal-config-card glass-panel rounded-3xl p-4 flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center text-app-accent shrink-0">
+                        <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                    </span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-black text-white">Seances</span>
+                        <span class="block text-[10px] text-app-muted font-bold">Nombre de workouts a finir</span>
+                    </span>
+                    <span class="flex items-baseline gap-1 shrink-0">
+                        <input type="number" min="1" max="14" step="1" value="{{ profileView.weeklyGoal.workouts.target }}" class="neo-input w-14 text-3xl font-black text-white tabular-nums" data-weekly-goal-target="workouts" aria-label="Objectif de seances">
+                        <span class="text-xs font-bold text-app-muted">/sem</span>
+                    </span>
+                </label>
+
+                <label class="goal-config-card glass-panel rounded-3xl p-4 flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center text-app-accent shrink-0">
+                        <i data-lucide="dumbbell" class="w-5 h-5"></i>
+                    </span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-black text-white">Volume</span>
+                        <span class="block text-[10px] text-app-muted font-bold">Tonnage total a atteindre</span>
+                    </span>
+                    <span class="flex items-baseline gap-1 shrink-0">
+                        <input type="number" min="1" max="200" step="0.5" value="{{ (profileView.weeklyGoal.volume.target / 1000)|number_format(1, '.', '') }}" class="neo-input w-16 text-3xl font-black text-white tabular-nums" data-weekly-goal-target="volume" aria-label="Objectif de volume en tonnes">
+                        <span class="text-xs font-bold text-app-muted">T</span>
+                    </span>
+                </label>
+
+                <label class="goal-config-card glass-panel rounded-3xl p-4 flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center text-app-accent shrink-0">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-sm font-black text-white">Minutes</span>
+                        <span class="block text-[10px] text-app-muted font-bold">Temps total d'entrainement</span>
+                    </span>
+                    <span class="flex items-baseline gap-1 shrink-0">
+                        <input type="number" min="30" max="1500" step="15" value="{{ profileView.weeklyGoal.trainingMinutes.target }}" class="neo-input w-20 text-3xl font-black text-white tabular-nums" data-weekly-goal-target="minutes" aria-label="Objectif de minutes">
+                        <span class="text-xs font-bold text-app-muted">min</span>
+                    </span>
+                </label>
+
+                <p class="min-h-4 text-xs font-bold text-rose-400" data-weekly-goal-target="error"></p>
+
+                <button type="submit" class="w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-black shadow-neon active:scale-[0.98] transition-transform" data-weekly-goal-target="submit">
+                    Enregistrer les objectifs
+                </button>
+            </div>
+        </form>
     </div>
 </section>

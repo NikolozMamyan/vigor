@@ -1,0 +1,198 @@
+<section
+    id="view-records"
+    class="tab-content {{ activeView == 'records' ? 'active' }} px-6 space-y-6"
+    data-vigor-navigation-target="view"
+    data-view="records"
+    data-controller="records"
+    data-records-records-value="{{ recordsView.recordsJson|e('html_attr') }}"
+>
+    <div class="flex items-center justify-between pt-2">
+        <div>
+            <span class="text-[10px] text-app-muted uppercase font-black tracking-widest block mb-0.5">Hall of Fame</span>
+            <h2 class="text-3xl font-black text-white tracking-tight">Tes Records (PR)</h2>
+        </div>
+        <button type="button" class="w-10 h-10 rounded-full bg-app-accent/10 border border-app-accent/20 flex items-center justify-center text-app-accent hover:bg-app-accent hover:text-black transition-all btn-press" data-action="records#share" aria-label="Partager tes records">
+            <i data-lucide="share" class="w-4 h-4"></i>
+        </button>
+    </div>
+
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1" data-swipe-ignore>
+        <button type="button" class="records-filter is-active shrink-0 px-4 py-2 rounded-xl bg-white text-black text-xs font-black" data-records-target="filter" data-records-category-param="all" data-action="records#filter">Tous</button>
+        {% for filter in recordsView.filters %}
+            <button type="button" class="records-filter shrink-0 px-4 py-2 rounded-xl glass-panel text-app-muted text-xs font-bold hover:text-white border-white/5" data-records-target="filter" data-records-category-param="{{ filter }}" data-action="records#filter">{{ filter }}</button>
+        {% endfor %}
+    </div>
+
+    {% if recordsView.featured %}
+        {% set featured = recordsView.featured %}
+        <button type="button" class="holo-card clickable-pr-card rounded-[2rem] p-6 shadow-2xl relative cursor-pointer transition-all w-full text-left" data-records-target="card" data-category="{{ featured.category }}" data-record-id="{{ featured.id }}" data-action="records#open">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-app-accent/20 blur-[30px] rounded-full pointer-events-none"></div>
+
+            <div class="flex justify-between items-start relative z-10">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="crown" class="text-app-accent w-5 h-5"></i>
+                    <span class="text-[10px] text-app-accent uppercase font-black tracking-widest">Mouvement Roi</span>
+                </div>
+                <span class="bg-black/60 backdrop-blur-md border border-white/15 text-[9px] font-black uppercase text-white px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> Elite
+                </span>
+            </div>
+
+            <div class="mt-4 relative z-10">
+                <h3 class="text-xl font-black text-white leading-tight">{{ featured.name }}</h3>
+                <p class="text-[10px] text-app-muted mt-0.5">Clique pour voir la courbe de force</p>
+
+                <div class="flex items-end gap-3 mt-3">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{{ featured.estimatedOneRepMaxLabel }}</span>
+                        <span class="text-sm font-bold text-app-accent">kg</span>
+                    </div>
+                    <div class="pb-1.5">
+                        <span class="text-[10px] bg-white/10 text-white px-2 py-1 rounded-md font-bold uppercase tracking-wider">1RM Estime</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-4 pt-4 border-t border-white/10 text-xs">
+                    <span class="text-app-muted font-bold flex items-center gap-2 min-w-0">
+                        <i data-lucide="dumbbell" class="w-4 h-4 text-app-muted shrink-0"></i>
+                        <span class="truncate">Reel : <span class="text-white font-black">{{ featured.weight }}kg x {{ featured.reps }} reps</span></span>
+                    </span>
+                    <span class="text-app-accent font-black flex items-center gap-1 shrink-0">
+                        Analyser <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </span>
+                </div>
+            </div>
+        </button>
+    {% endif %}
+
+    <div class="space-y-4">
+        <h3 class="text-xs font-black text-white uppercase tracking-widest mb-1 flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-app-accent"></i> Historique des 1RM
+        </h3>
+
+        <div class="space-y-3">
+            {% for record in recordsView.records %}
+                <button type="button" class="record-list-card glass-panel clickable-pr-card rounded-3xl p-4 relative overflow-hidden group transition-all cursor-pointer border border-white/5 w-full text-left" data-records-target="card" data-category="{{ record.category }}" data-record-id="{{ record.id }}" data-action="records#open">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex gap-3 items-center min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 text-white group-hover:text-app-accent transition-colors shrink-0">
+                                <i data-lucide="dumbbell" class="w-5 h-5"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-extrabold text-white truncate">{{ record.name }}</h4>
+                                <span class="text-[9px] text-app-muted uppercase font-black tracking-wider">{{ record.category }} - {{ record.date }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/40 rounded-2xl p-3 border border-white/5 grid grid-cols-[1fr_auto_1.15fr_auto_0.9fr] items-center gap-2">
+                        <div>
+                            <span class="block text-[8px] uppercase tracking-widest font-black text-app-muted mb-0.5">1RM Estime</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-2xl font-black text-app-accent tabular-nums">{{ record.estimatedOneRepMaxLabel }}</span>
+                                <span class="text-xs font-bold text-app-accent/70">kg</span>
+                            </div>
+                        </div>
+
+                        <div class="h-8 w-px bg-white/10"></div>
+
+                        <div>
+                            <span class="block text-[8px] uppercase tracking-widest font-black text-app-muted mb-0.5">Dernier Lift</span>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-lg font-black text-white">{{ record.weight }}<span class="text-[10px] font-bold text-app-muted mx-0.5">kg</span></span>
+                                <span class="text-white/30 text-xs font-black mx-0.5">x</span>
+                                <span class="text-lg font-black text-white">{{ record.reps }}<span class="text-[10px] font-bold text-app-muted ml-0.5">reps</span></span>
+                            </div>
+                        </div>
+
+                        <div class="h-8 w-px bg-white/10"></div>
+
+                        <div class="text-right flex justify-end">
+                            <span class="inline-flex items-center gap-1 {{ record.trendPositive ? 'text-emerald-400' : 'text-app-muted' }} text-[10px] font-black uppercase bg-white/5 px-2 py-1 rounded-md border border-white/5">
+                                <i data-lucide="{{ record.trendPositive ? 'trending-up' : 'minus' }}" class="w-3 h-3"></i> {{ record.trend }}
+                            </span>
+                        </div>
+                    </div>
+                </button>
+            {% else %}
+                <article class="glass-panel rounded-3xl p-8 text-center">
+                    <i data-lucide="trophy" class="w-8 h-8 text-app-muted mx-auto mb-3"></i>
+                    <p class="font-bold text-white">Aucun record personnel</p>
+                    <p class="text-xs text-app-muted mt-1">Termine des series pour alimenter ton Hall of Fame.</p>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="fixed inset-0 z-[110] opacity-0 pointer-events-none transition-all duration-300 flex items-end justify-center" data-records-target="modal">
+        <button type="button" class="absolute inset-0 bg-black/85 backdrop-blur-xl transition-opacity w-full" data-action="records#close" aria-label="Fermer les details du record"></button>
+
+        <div class="records-modal-box w-full max-w-md bg-[#09090b] border-t border-white/12 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.8)] relative z-20 flex flex-col max-h-[90vh] overflow-hidden transform translate-y-full transition-transform duration-300">
+            <div class="px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/5">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center text-app-accent shrink-0">
+                        <i data-lucide="dumbbell" class="w-5 h-5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <span class="text-[9px] text-app-muted font-black uppercase tracking-widest block" data-records-target="modalCategory">Pectoraux</span>
+                        <h3 class="text-lg font-black text-white truncate" data-records-target="modalName">Developpe Couche</h3>
+                    </div>
+                </div>
+                <button type="button" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-app-muted hover:text-white transition-all btn-press" data-action="records#close" aria-label="Fermer">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6 pb-12">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="glass-panel rounded-3xl p-4 flex flex-col justify-center">
+                        <span class="text-[9px] text-app-muted uppercase font-black tracking-widest mb-1 block">1RM Estime Max</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-black text-app-accent tabular-nums" data-records-target="modalOneRepMax">0</span>
+                            <span class="text-xs font-bold text-app-accent">kg</span>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-3xl p-4 flex flex-col justify-center">
+                        <span class="text-[9px] text-app-muted uppercase font-black tracking-widest mb-1 block">Dernier volume</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-black text-white tabular-nums" data-records-target="modalVolume">0</span>
+                            <span class="text-xs font-bold text-app-muted">kg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-[2rem] p-5 space-y-3 relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-white uppercase font-black tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="trending-up" class="w-3.5 h-3.5 text-app-accent"></i> Courbe de Progression 1RM
+                        </span>
+                        <span class="text-[9px] text-app-muted font-bold">Dernieres 5 seances</span>
+                    </div>
+
+                    <div class="relative h-32 w-full mt-4 flex items-center justify-center">
+                        <svg class="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+                            <line x1="0" y1="10" x2="100" y2="10" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" />
+                            <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" />
+                            <path data-records-target="gradientPath" d="M 0 40 L 100 40 Z" fill="url(#records-neon-gradient)" opacity="0.15"></path>
+                            <path data-records-target="curvePath" d="M 0 35 L 100 8" fill="none" stroke="#ccff00" stroke-width="2" stroke-linecap="round"></path>
+                            <defs>
+                                <linearGradient id="records-neon-gradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#ccff00" />
+                                    <stop offset="100%" stop-color="#ccff00" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="records-curve-dot absolute w-3 h-3 bg-app-accent rounded-full border border-black shadow-[0_0_10px_#ccff00]" data-records-target="curveDot"></span>
+                    </div>
+
+                    <div class="flex justify-between text-[9px] font-black text-app-muted tracking-wider uppercase pt-2 border-t border-white/5" data-records-target="legend"></div>
+                </div>
+
+                <div class="space-y-3">
+                    <span class="text-[10px] text-app-muted uppercase font-black tracking-widest block">Details Historiques</span>
+                    <div class="space-y-2.5" data-records-target="history"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -40,6 +40,17 @@ final class VigorAppControllerTest extends WebTestCase
         self::assertSelectorExists('[data-vigor-navigation-view-param="stats"]');
     }
 
+    public function testRecordsRouteActivatesRecordsView(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/app/records');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#view-records.active');
+        self::assertSelectorTextContains('#view-records h2', 'Tes Records');
+        self::assertSelectorExists('[data-vigor-navigation-view-param="records"]');
+    }
+
     public function testProfileRouteActivatesProfileView(): void
     {
         $client = static::createClient();
@@ -47,5 +58,8 @@ final class VigorAppControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('#view-profile.active');
+        self::assertSelectorExists('#view-profile[data-controller~="weekly-goal"]');
+        self::assertSelectorExists('[data-action="weekly-goal#open"]');
+        self::assertSelectorExists('[data-weekly-goal-target~="modal"]');
     }
 }

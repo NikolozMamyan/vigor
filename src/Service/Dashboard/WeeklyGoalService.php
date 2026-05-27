@@ -7,12 +7,14 @@ use App\Entity\WeeklyGoal;
 use App\Entity\WorkoutSet;
 use App\Repository\WeeklyGoalRepository;
 use App\Repository\WorkoutSetRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 final class WeeklyGoalService
 {
     public function __construct(
         private readonly WeeklyGoalRepository $goalRepository,
         private readonly WorkoutSetRepository $setRepository,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -56,6 +58,43 @@ final class WeeklyGoalService
                 'percent' => $this->percent($trainingMinutes, $goal->getTargetTrainingMinutes()),
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function updateCurrentWeek(UserProfile $profile, int $targetWorkouts, int $targetVolume, int $targetTrainingMinutes, ?\DateTimeImmutable $now = null): array
+    {
+        if ($targetWorkouts < 1 || $targetWorkouts > 14) {
+            throw new \InvalidArgumentException('Le nombre de seances doit etre compris entre 1 et 14.');
+        }
+
+        if ($targetVolume < 1000 || $targetVolume > 200000) {
+            throw new \InvalidArgumentException('Le volume doit etre compris entre 1T et 200T.');
+        }
+
+        if ($targetTrainingMinutes < 30 || $targetTrainingMinutes > 1500) {
+            throw new \InvalidArgumentException('Les minutes doivent etre comprises entre 30 et 1500.');
+        }
+
+        $now ??= new \DateTimeImmutable();
+        $weekStart = $now->modify('monday this week')->setTime(0, 0);
+        $goal = $this->goalRepository->findForProfileAndWeek($profile, $weekStart)
+            ?? new WeeklyGoal($profile, $weekStart);
+
+        $goal
+            ->setTargetWorkouts($targetWorkouts)
+            ->setTargetVolume($targetVolume)
+            ->setTargetTrainingMinutes($targetTrainingMinutes);
+
+        $profile
+            ->setWeeklyWorkoutGoal($targetWorkouts)
+            ->setWeeklyVolumeGoal($targetVolume);
+
+        $this->entityManager->persist($goal);
+        $this->entityManager->flush();
+
+        return $this->buildProgress($profile, $now);
     }
 
     /**

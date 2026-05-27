@@ -130,15 +130,30 @@
     <div class="glass-panel rounded-[2rem] p-5 space-y-4">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-black text-white uppercase tracking-wider">Pics par seance</h3>
-            <span class="text-xs font-black text-app-muted">Fatigue / force</span>
+            <span class="text-xs font-black text-app-muted">Meilleur 1RM</span>
         </div>
-        <div class="relative h-32 rounded-2xl bg-black/20 border border-white/5 overflow-hidden">
+        <div class="relative h-40 rounded-2xl bg-black/20 border border-white/5 overflow-hidden">
+            <div class="absolute inset-x-4 top-5 bottom-9 flex flex-col justify-between pointer-events-none opacity-10">
+                <div class="border-b border-white w-full"></div>
+                <div class="border-b border-white w-full"></div>
+                <div class="border-b border-white w-full"></div>
+            </div>
             {% for session in statsAnalytics.sessions %}
-                <div class="absolute rounded-full bg-app-accent/70 shadow-[0_0_22px_rgba(204,255,0,.45)] flex items-center justify-center text-[8px] font-black text-black" style="left: {{ session.x }}%; bottom: {{ session.y }}%; width: {{ session.size }}px; height: {{ session.size }}px" title="{{ session.name }} - {{ session.kg }}kg">{{ session.tons }}T</div>
+                <div
+                    class="absolute -translate-x-1/2 translate-y-1/2 rounded-full bg-app-accent/80 shadow-[0_0_22px_rgba(204,255,0,.45)] flex items-center justify-center text-[8px] font-black text-black"
+                    style="left: {{ session.x }}%; bottom: {{ session.y }}%; width: {{ session.size }}px; height: {{ session.size }}px"
+                    title="{{ session.name }} - {{ session.peakExercise }} - {{ session.peakOneRepMax }}kg 1RM estime - {{ session.tons }}T"
+                >
+                    {{ session.peakOneRepMax }}kg
+                </div>
+                <div class="absolute -translate-x-1/2 bottom-2 text-center" style="left: {{ session.x }}%">
+                    <span class="block text-[9px] font-black text-white">{{ session.date }}</span>
+                    <span class="block text-[8px] font-bold text-app-muted">{{ session.tons }}T</span>
+                </div>
             {% else %}
                 <p class="absolute inset-0 flex items-center justify-center text-xs text-app-muted">Aucune seance sur cette periode.</p>
             {% endfor %}
-            <div class="absolute left-4 right-4 bottom-6 border-b border-white/10"></div>
+            <div class="absolute left-4 right-4 bottom-9 border-b border-white/10"></div>
         </div>
     </div>
 

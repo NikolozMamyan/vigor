@@ -220,25 +220,42 @@ final class StatsAnalyticsService
             $id = $session->getId() ?? spl_object_id($session);
 
             if (!isset($sessions[$id])) {
+                $completedAt = $session->getCompletedAt() ?? $session->getStartedAt();
                 $sessions[$id] = [
                     'name' => $session->getName(),
-                    'date' => $session->getCompletedAt()?->format('d/m') ?? $session->getStartedAt()->format('d/m'),
+                    'date' => $completedAt->format('d/m'),
+                    'sortTimestamp' => $completedAt->getTimestamp(),
                     'volume' => 0.0,
                     'sets' => 0,
+                    'peakOneRepMax' => 0.0,
+                    'peakExercise' => '',
                     'durationMinutes' => $session->getDurationSeconds() ? (int) ceil($session->getDurationSeconds() / 60) : 0,
                 ];
             }
 
             $sessions[$id]['volume'] += $set->getVolume();
             ++$sessions[$id]['sets'];
+
+            $estimatedOneRepMax = $set->getEstimatedOneRepMax() ?? $set->getWeight();
+
+            if ($estimatedOneRepMax > $sessions[$id]['peakOneRepMax']) {
+                $sessions[$id]['peakOneRepMax'] = $estimatedOneRepMax;
+                $sessions[$id]['peakExercise'] = $set->getSessionExercise()->getExercise()->getName();
+            }
         }
 
+        uasort($sessions, static fn (array $a, array $b): int => $a['sortTimestamp'] <=> $b['sortTimestamp']);
+        $sessions = array_slice(array_values($sessions), -5);
         $maxVolume = max(array_column($sessions, 'volume') ?: [1]) ?: 1.0;
-        $position = 0;
+        $peaks = array_column($sessions, 'peakOneRepMax');
+        $minPeak = min($peaks ?: [0]);
+        $maxPeak = max($peaks ?: [1]) ?: 1.0;
+        $peakRange = max(1.0, $maxPeak - $minPeak);
+        $count = \count($sessions);
 
-        return array_map(function (array $session) use ($maxVolume, &$position): array {
+        return array_map(function (array $session, int $index) use ($maxVolume, $minPeak, $peakRange, $count): array {
             $volumeRatio = $session['volume'] / $maxVolume;
-            $x = 14 + ($position++ * 28) % 76;
+            $peakRatio = ($session['peakOneRepMax'] - $minPeak) / $peakRange;
 
             return [
                 'name' => $session['name'],
@@ -246,12 +263,14 @@ final class StatsAnalyticsService
                 'kg' => (int) round($session['volume']),
                 'tons' => $this->formatTons($session['volume']),
                 'sets' => $session['sets'],
+                'peakOneRepMax' => $this->formatNumber($session['peakOneRepMax']),
+                'peakExercise' => $session['peakExercise'],
                 'durationMinutes' => $session['durationMinutes'],
-                'x' => $x,
-                'y' => 18 + (int) round((1 - $volumeRatio) * 54),
+                'x' => 1 === $count ? 50 : 10 + (int) round($index * (80 / max(1, $count - 1))),
+                'y' => 18 + (int) round($peakRatio * 58),
                 'size' => 32 + (int) round($volumeRatio * 24),
             ];
-        }, array_slice(array_values($sessions), -4));
+        }, $sessions, array_keys($sessions));
     }
 
     private function buildFunFact(float $volume): array
