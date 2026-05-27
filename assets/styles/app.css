@@ -22,6 +22,7 @@
     --app-accent: #ccff00;
     --app-accent-2: #00f0ff;
     --app-muted: #8f8f9d;
+    --app-viewport-bottom: 0px;
 }
 
 html,
@@ -47,6 +48,7 @@ body {
     overscroll-behavior-y: none;
     min-height: 100dvh;
     min-height: 100svh;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-container {
@@ -74,7 +76,7 @@ body {
 }
 
 .app-bottom-nav {
-    bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
+    bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + var(--app-viewport-bottom) + 0.85rem));
 }
 
 .app-rest-timer {
@@ -142,6 +144,95 @@ body {
     display: block;
     opacity: 1;
     transform: translateY(0) scale(1);
+}
+
+.app-navigation-skeleton {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    padding: max(6rem, calc(env(safe-area-inset-top) + 5rem)) 1.5rem max(9rem, calc(env(safe-area-inset-bottom) + 8rem));
+    background: #050505;
+    overflow: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+}
+
+.app-navigation-skeleton.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.app-skeleton-screen {
+    width: 100%;
+    height: 100%;
+    max-width: 24rem;
+    margin: 0 auto;
+}
+
+.app-skeleton-header,
+.app-skeleton-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.app-skeleton-header {
+    grid-template-columns: 3rem 1fr;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.app-skeleton-heading {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.app-skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 1rem 0;
+}
+
+.app-skeleton-line,
+.app-skeleton-row,
+.app-skeleton-avatar,
+.app-skeleton-hero,
+.app-skeleton-tile {
+    display: block;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+    background-size: 220% 100%;
+    animation: skeletonShimmer 1.05s linear infinite;
+}
+
+.app-skeleton-line {
+    height: 0.75rem;
+    border-radius: 999px;
+}
+
+.app-skeleton-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1.25rem;
+}
+
+.app-skeleton-hero {
+    height: 10rem;
+    border-radius: 1.75rem;
+}
+
+.app-skeleton-tile {
+    height: 5.5rem;
+    border-radius: 1.5rem;
+}
+
+.app-skeleton-row {
+    height: 4rem;
+    margin-top: 1rem;
+    border-radius: 1.25rem;
+}
+
+.app-skeleton-row.short {
+    width: 72%;
 }
 
 .tab-content.swipe-preview {
@@ -344,4 +435,9 @@ input[type="number"]::-webkit-outer-spin-button {
         opacity: 0.7;
         filter: drop-shadow(0 0 5px rgba(204, 255, 0, 0.2));
     }
+}
+
+@keyframes skeletonShimmer {
+    from { background-position: 120% 0; }
+    to { background-position: -120% 0; }
 }

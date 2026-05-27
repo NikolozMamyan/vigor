@@ -1,13 +1,16 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['view', 'button', 'indicator', 'outerRing', 'innerRing'];
+    static targets = ['view', 'button', 'indicator', 'outerRing', 'innerRing', 'skeleton'];
     static values = { active: String };
 
     connect() {
         this.views = ['home', 'workout', 'library', 'profile'];
         this.swipe = null;
         this.previewView = null;
+        this.refreshRequests = new Map();
+        this.backgroundRefreshTimer = null;
+        this.skeletonTimer = null;
 
         this.boundTouchStart = (event) => this.startTouchSwipe(event);
         this.boundTouchMove = (event) => this.moveTouchSwipe(event);
@@ -19,6 +22,7 @@ export default class extends Controller {
         this.boundPointerCancel = () => this.cancelSwipe();
         this.boundPopState = (event) => this.show(event.state?.view || this.viewFromPath() || 'home', false);
         this.boundRefreshViews = (event) => this.refreshViews(event.detail || {});
+        this.boundResizeViewport = () => this.syncViewportBottom();
 
         this.element.addEventListener('touchstart', this.boundTouchStart, { passive: true });
         this.element.addEventListener('touchmove', this.boundTouchMove, { passive: false });
@@ -29,8 +33,11 @@ export default class extends Controller {
         this.element.addEventListener('pointerup', this.boundPointerUp);
         this.element.addEventListener('pointercancel', this.boundPointerCancel);
         window.addEventListener('popstate', this.boundPopState);
+        window.visualViewport?.addEventListener('resize', this.boundResizeViewport);
+        window.visualViewport?.addEventListener('scroll', this.boundResizeViewport);
         this.element.addEventListener('vigor:refresh-views', this.boundRefreshViews);
 
+        this.syncViewportBottom();
         this.show(this.activeValue || 'home', false);
         window.setTimeout(() => this.animateRings(), 300);
     }
@@ -45,7 +52,11 @@ export default class extends Controller {
         this.element.removeEventListener('pointerup', this.boundPointerUp);
         this.element.removeEventListener('pointercancel', this.boundPointerCancel);
         window.removeEventListener('popstate', this.boundPopState);
+        window.visualViewport?.removeEventListener('resize', this.boundResizeViewport);
+        window.visualViewport?.removeEventListener('scroll', this.boundResizeViewport);
         this.element.removeEventListener('vigor:refresh-views', this.boundRefreshViews);
+        window.clearTimeout(this.backgroundRefreshTimer);
+        window.clearTimeout(this.skeletonTimer);
     }
 
     navigate(event) {
@@ -93,6 +104,11 @@ export default class extends Controller {
             detail: { view },
             bubbles: true,
         }));
+
+        if (pushState && view !== previousView) {
+            this.refreshViews({ views: [view], nextView: view, path: `/app/${view}` });
+            this.queueBackgroundRefresh(this.views.filter((item) => item !== view));
+        }
     }
 
     startTouchSwipe(event) {
@@ -421,7 +437,7 @@ export default class extends Controller {
         }
     }
 
-    async refreshViews({ views = [], nextView = null, path = null } = {}) {
+    async refreshViews({ views = [], nextView = null, path = null, background = false } = {}) {
         const requestedViews = Array.isArray(views) && views.length > 0 ? views : [this.activeValue];
         const uniqueViews = [...new Set(requestedViews.filter((view) => this.views.includes(view)))];
         const targetView = nextView && this.views.includes(nextView) ? nextView : this.activeValue;
@@ -434,9 +450,16 @@ export default class extends Controller {
             return;
         }
 
-        this.setRefreshing(uniqueViews, true);
+        const refreshKey = uniqueViews.sort().join(':');
 
-        try {
+        if (this.refreshRequests.has(refreshKey)) {
+            return this.refreshRequests.get(refreshKey);
+        }
+
+        this.setRefreshing(uniqueViews, true);
+        this.setSkeleton(!background);
+
+        const request = (async () => {
             const response = await fetch(path || `/app/${targetView}`, {
                 headers: { Accept: 'text/html' },
                 cache: 'no-store',
@@ -466,8 +489,16 @@ export default class extends Controller {
             if (window.lucide) {
                 window.lucide.createIcons();
             }
+        })();
+
+        this.refreshRequests.set(refreshKey, request);
+
+        try {
+            await request;
         } finally {
+            this.refreshRequests.delete(refreshKey);
             this.setRefreshing(uniqueViews, false);
+            this.setSkeleton(false);
         }
     }
 
@@ -490,5 +521,43 @@ export default class extends Controller {
         if (scroller) {
             scroller.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         }
+    }
+
+    queueBackgroundRefresh(views) {
+        window.clearTimeout(this.backgroundRefreshTimer);
+        this.backgroundRefreshTimer = window.setTimeout(() => {
+            this.refreshViews({
+                views,
+                nextView: this.activeValue,
+                path: `/app/${this.activeValue}`,
+                background: true,
+            });
+        }, 900);
+    }
+
+    setSkeleton(visible) {
+        if (!this.hasSkeletonTarget) {
+            return;
+        }
+
+        window.clearTimeout(this.skeletonTimer);
+
+        if (visible) {
+            this.skeletonTarget.classList.add('is-visible');
+            return;
+        }
+
+        this.skeletonTimer = window.setTimeout(() => {
+            this.skeletonTarget.classList.remove('is-visible');
+        }, 120);
+    }
+
+    syncViewportBottom() {
+        if (!window.visualViewport) {
+            return;
+        }
+
+        const bottomInset = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        document.documentElement.style.setProperty('--app-viewport-bottom', `${Math.round(bottomInset)}px`);
     }
 }

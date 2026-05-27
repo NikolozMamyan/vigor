@@ -26,7 +26,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                window.location.href = '/app/workout';
+                this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
                 return;
             }
         } catch {
@@ -54,7 +54,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                window.location.href = '/app/workout';
+                this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
                 return;
             }
         } catch {
@@ -62,5 +62,18 @@ export default class extends Controller {
 
         button.disabled = false;
         button.classList.remove('opacity-70');
+    }
+
+    navigateWithRefresh(nextView, views) {
+        this.close();
+        this.element.dispatchEvent(new CustomEvent('vigor:refresh-views', {
+            detail: {
+                views,
+                nextView,
+                path: `/app/${nextView}`,
+            },
+            bubbles: true,
+        }));
+        window.history.pushState({ view: nextView }, '', `/app/${nextView}`);
     }
 }

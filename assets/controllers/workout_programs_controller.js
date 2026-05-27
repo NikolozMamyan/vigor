@@ -90,7 +90,7 @@ export default class extends Controller {
         const session = await this.request(`/api/workout-programs/${programId}/start`, 'POST');
 
         if (session) {
-            window.location.href = '/app/workout';
+            this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
             return;
         }
 
@@ -104,7 +104,7 @@ export default class extends Controller {
         const session = await this.request('/api/workout-sessions/free', 'POST');
 
         if (session) {
-            window.location.href = '/app/workout';
+            this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
             return;
         }
 
@@ -114,6 +114,19 @@ export default class extends Controller {
     setBusy(button, busy) {
         button.disabled = busy;
         button.classList.toggle('opacity-70', busy);
+    }
+
+    navigateWithRefresh(nextView, views) {
+        this.closeCreate();
+        this.element.dispatchEvent(new CustomEvent('vigor:refresh-views', {
+            detail: {
+                views,
+                nextView,
+                path: `/app/${nextView}`,
+            },
+            bubbles: true,
+        }));
+        window.history.pushState({ view: nextView }, '', `/app/${nextView}`);
     }
 
     filterExercises() {

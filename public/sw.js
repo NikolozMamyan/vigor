@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vigor-v2';
+const CACHE_NAME = 'vigor-v3';
 const APP_SHELL_URLS = [
     '/app',
     '/manifest.webmanifest',
@@ -68,6 +68,14 @@ function networkFirst(request) {
 
 function networkFirstPage(request) {
     return fetch(request, { cache: 'no-store' })
+        .then((response) => {
+            if (response.ok) {
+                const copy = response.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put('/app', copy));
+            }
+
+            return response;
+        })
         .catch(() => caches.match('/app'));
 }
 

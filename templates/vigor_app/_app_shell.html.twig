@@ -17,6 +17,26 @@
         {% include 'vigor_app/views/_profile.html.twig' %}
     </main>
 
+    <div class="app-navigation-skeleton opacity-0" data-vigor-navigation-target="skeleton" aria-hidden="true">
+        <div class="app-skeleton-screen">
+            <div class="app-skeleton-header">
+                <span class="app-skeleton-avatar"></span>
+                <span class="app-skeleton-heading">
+                    <span class="app-skeleton-line w-24"></span>
+                    <span class="app-skeleton-line w-40"></span>
+                </span>
+            </div>
+            <span class="app-skeleton-hero"></span>
+            <div class="app-skeleton-grid">
+                <span class="app-skeleton-tile"></span>
+                <span class="app-skeleton-tile"></span>
+            </div>
+            <span class="app-skeleton-row"></span>
+            <span class="app-skeleton-row"></span>
+            <span class="app-skeleton-row short"></span>
+        </div>
+    </div>
+
     {% include 'vigor_app/_rest_timer.html.twig' %}
     {% include 'vigor_app/_bottom_nav.html.twig' %}
 </div>

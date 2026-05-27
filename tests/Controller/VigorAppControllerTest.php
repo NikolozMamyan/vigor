@@ -14,6 +14,8 @@ final class VigorAppControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Pret a briser');
         self::assertSelectorExists('[data-controller~="vigor-navigation"]');
+        self::assertSelectorExists('[data-vigor-navigation-target~="skeleton"]');
+        self::assertSelectorExists('nav.app-bottom-nav.fixed');
     }
 
     public function testWorkoutRouteActivatesWorkoutView(): void
