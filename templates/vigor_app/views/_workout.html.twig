@@ -19,17 +19,19 @@
     <div class="px-6 space-y-4">
         <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6" data-swipe-ignore data-active-workout-target="exerciseStrip">
             {% for item in activeWorkout.exerciseList|default([]) %}
-                <button type="button" class="shrink-0 rounded-2xl p-2 pr-4 text-left border flex items-center gap-2 {{ item.active ? 'bg-app-accent text-black border-app-accent' : 'glass-panel text-white border-white/10' }}" data-action="active-workout#switchExercise" data-session-exercise-id="{{ item.id }}">
-                    <img src="{{ item.image }}" alt="" class="w-9 h-9 rounded-xl object-cover">
-                    <span>
-                        <span class="block text-xs font-extrabold">{{ item.name }}</span>
-                        <span class="block text-[9px] font-bold uppercase tracking-wider {{ item.active ? 'text-black/60' : 'text-app-muted' }}">{{ item.muscleGroup }}</span>
-                    </span>
-                </button>
+                <div class="shrink-0 rounded-2xl border flex items-center gap-1 overflow-hidden {{ item.active ? 'bg-app-accent text-black border-app-accent' : 'glass-panel text-white border-white/10' }}" data-session-exercise-row="{{ item.id }}">
+                    <button type="button" class="min-w-0 p-2 pr-2 text-left flex items-center gap-2" data-action="active-workout#switchExercise" data-session-exercise-id="{{ item.id }}">
+                        <img src="{{ item.image }}" alt="" class="w-9 h-9 rounded-xl object-cover">
+                        <span class="min-w-0">
+                            <span class="block text-xs font-extrabold truncate max-w-[8rem]">{{ item.name }}</span>
+                            <span class="block text-[9px] font-bold uppercase tracking-wider {{ item.active ? 'text-black/60' : 'text-app-muted' }}">{{ item.muscleGroup }}</span>
+                        </span>
+                    </button>
+                    <button type="button" class="w-9 h-12 flex items-center justify-center {{ item.active ? 'text-black/55 hover:text-black' : 'text-app-muted hover:text-rose-400' }}" data-action="active-workout#removeExercise" data-session-exercise-id="{{ item.id }}" aria-label="Supprimer {{ item.name }}">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
             {% endfor %}
-            <button type="button" class="shrink-0 w-12 h-12 rounded-2xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-app-muted hover:text-white hover:bg-white/10" data-action="active-workout#openExerciseModal" aria-label="Ajouter un exercice">
-                <i data-lucide="plus" class="w-5 h-5"></i>
-            </button>
         </div>
 
         <div class="flex justify-between items-end mb-2">

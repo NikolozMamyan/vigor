@@ -122,6 +122,18 @@ final class WorkoutSessionController extends AbstractController
         ]);
     }
 
+    #[Route('/api/workout-session-exercises/{id}', name: 'api_workout_session_exercises_delete', methods: ['DELETE'])]
+    public function deleteSessionExercise(WorkoutSessionExercise $sessionExercise, WorkoutSessionService $sessionService): JsonResponse
+    {
+        try {
+            $sessionService->removeExercise($sessionExercise);
+
+            return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

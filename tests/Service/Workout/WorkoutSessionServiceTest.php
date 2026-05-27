@@ -9,7 +9,9 @@ use App\Entity\Exercise;
 use App\Entity\WorkoutProgram;
 use App\Entity\WorkoutProgramExercise;
 use App\Entity\WorkoutSession;
+use App\Entity\WorkoutSessionExercise;
 use App\Repository\WorkoutProgramExerciseReaderInterface;
+use App\Repository\WorkoutSessionExerciseReaderInterface;
 use App\Repository\WorkoutSessionReaderInterface;
 use App\Service\Workout\WorkoutSessionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -133,15 +135,65 @@ final class WorkoutSessionServiceTest extends TestCase
         self::assertSame($program, $result->getProgram());
     }
 
+    public function testRemoveExerciseRemovesSessionExerciseWhenSessionKeepsAnotherExercise(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+        $exercise = $this->createExercise();
+        $sessionExercise = new WorkoutSessionExercise($session, $exercise);
+        $otherSessionExercise = new WorkoutSessionExercise($session, $exercise);
+
+        $sessionExerciseRepository = $this->createMock(WorkoutSessionExerciseReaderInterface::class);
+        $sessionExerciseRepository
+            ->expects(self::once())
+            ->method('findForSession')
+            ->with($session)
+            ->willReturn([$sessionExercise, $otherSessionExercise]);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('remove')->with($sessionExercise);
+        $entityManager->expects(self::once())->method('flush');
+
+        $this->createService(
+            entityManager: $entityManager,
+            sessionExerciseRepository: $sessionExerciseRepository,
+        )->removeExercise($sessionExercise);
+    }
+
+    public function testRemoveExerciseRejectsLastExercise(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+        $sessionExercise = new WorkoutSessionExercise($session, $this->createExercise());
+
+        $sessionExerciseRepository = $this->createMock(WorkoutSessionExerciseReaderInterface::class);
+        $sessionExerciseRepository
+            ->expects(self::once())
+            ->method('findForSession')
+            ->with($session)
+            ->willReturn([$sessionExercise]);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('remove');
+        $entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->createService(
+            entityManager: $entityManager,
+            sessionExerciseRepository: $sessionExerciseRepository,
+        )->removeExercise($sessionExercise);
+    }
+
     private function createService(
         EntityManagerInterface $entityManager,
         ?WorkoutSessionReaderInterface $sessionRepository = null,
         ?WorkoutProgramExerciseReaderInterface $programExerciseRepository = null,
+        ?WorkoutSessionExerciseReaderInterface $sessionExerciseRepository = null,
     ): WorkoutSessionService {
         return new WorkoutSessionService(
             $entityManager,
             $sessionRepository ?? $this->createStub(WorkoutSessionReaderInterface::class),
             $programExerciseRepository ?? $this->createStub(WorkoutProgramExerciseReaderInterface::class),
+            $sessionExerciseRepository,
         );
     }
 

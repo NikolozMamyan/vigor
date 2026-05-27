@@ -7,7 +7,7 @@ use App\Entity\WorkoutSessionExercise;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-final class WorkoutSessionExerciseRepository extends ServiceEntityRepository
+final class WorkoutSessionExerciseRepository extends ServiceEntityRepository implements WorkoutSessionExerciseReaderInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

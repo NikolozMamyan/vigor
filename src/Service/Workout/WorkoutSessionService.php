@@ -10,7 +10,7 @@ use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
 use App\Repository\WorkoutProgramExerciseReaderInterface;
 use App\Repository\WorkoutSessionReaderInterface;
-use App\Repository\WorkoutSessionExerciseRepository;
+use App\Repository\WorkoutSessionExerciseReaderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class WorkoutSessionService
@@ -19,7 +19,7 @@ final class WorkoutSessionService
         private readonly EntityManagerInterface $entityManager,
         private readonly WorkoutSessionReaderInterface $sessionRepository,
         private readonly WorkoutProgramExerciseReaderInterface $programExerciseRepository,
-        private readonly ?WorkoutSessionExerciseRepository $sessionExerciseRepository = null,
+        private readonly ?WorkoutSessionExerciseReaderInterface $sessionExerciseRepository = null,
     ) {
     }
 
@@ -121,6 +121,21 @@ final class WorkoutSessionService
         $this->entityManager->flush();
 
         return $sessionExercise;
+    }
+
+    public function removeExercise(WorkoutSessionExercise $sessionExercise): void
+    {
+        $session = $sessionExercise->getSession();
+        $this->assertActive($session);
+
+        $sessionExercises = $this->sessionExerciseRepository?->findForSession($session) ?? [];
+
+        if (count($sessionExercises) <= 1) {
+            throw new \InvalidArgumentException('A workout session must keep at least one exercise.');
+        }
+
+        $this->entityManager->remove($sessionExercise);
+        $this->entityManager->flush();
     }
 
     public function cancel(WorkoutSession $session): WorkoutSession

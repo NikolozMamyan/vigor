@@ -187,6 +187,51 @@ export default class extends Controller {
         }
     }
 
+    async removeExercise(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const button = event.currentTarget;
+        const sessionExerciseId = Number.parseInt(button.dataset.sessionExerciseId, 10);
+
+        if (!Number.isFinite(sessionExerciseId)) {
+            return;
+        }
+
+        const row = button.closest('[data-session-exercise-row]');
+        const wasActive = sessionExerciseId === this.sessionExerciseIdValue;
+
+        button.disabled = true;
+        row?.classList.add('opacity-60');
+
+        try {
+            const response = await fetch(`/api/workout-session-exercises/${sessionExerciseId}`, {
+                method: 'DELETE',
+                headers: { Accept: 'application/json' },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            row?.remove();
+
+            if (wasActive) {
+                const nextPill = this.exerciseStripTarget.querySelector('[data-action="active-workout#switchExercise"]');
+
+                if (nextPill) {
+                    await this.switchExercise({ currentTarget: nextPill });
+                } else {
+                    this.navigateWithRefresh('workout', ['workout']);
+                }
+            }
+        } catch {
+        } finally {
+            button.disabled = false;
+            row?.classList.remove('opacity-60');
+        }
+    }
+
     applySessionExercise(sessionExercise) {
         this.sessionExerciseIdValue = sessionExercise.id;
         this.element.dataset.activeWorkoutSessionExerciseIdValue = sessionExercise.id;
@@ -240,27 +285,49 @@ export default class extends Controller {
     }
 
     appendExercisePill(sessionExercise) {
-        const addButton = this.exerciseStripTarget.querySelector('[data-action="active-workout#openExerciseModal"]');
-        addButton.insertAdjacentHTML('beforebegin', `
-            <button type="button" class="shrink-0 rounded-2xl p-2 pr-4 text-left border flex items-center gap-2 glass-panel text-white border-white/10" data-action="active-workout#switchExercise" data-session-exercise-id="${sessionExercise.id}">
-                <img src="${this.escapeAttribute(sessionExercise.image)}" alt="" class="w-9 h-9 rounded-xl object-cover">
-                <span>
-                    <span class="block text-xs font-extrabold">${this.escapeHtml(sessionExercise.exerciseName)}</span>
-                    <span class="block text-[9px] font-bold uppercase tracking-wider text-app-muted">${this.escapeHtml(sessionExercise.muscleGroup)}</span>
-                </span>
-            </button>
-        `);
+        this.exerciseStripTarget.insertAdjacentHTML('beforeend', this.exercisePillTemplate(sessionExercise));
+    }
+
+    exercisePillTemplate(sessionExercise) {
+        return `
+            <div class="shrink-0 rounded-2xl border flex items-center gap-1 overflow-hidden glass-panel text-white border-white/10" data-session-exercise-row="${sessionExercise.id}">
+                <button type="button" class="min-w-0 p-2 pr-2 text-left flex items-center gap-2" data-action="active-workout#switchExercise" data-session-exercise-id="${sessionExercise.id}">
+                    <img src="${this.escapeAttribute(sessionExercise.image)}" alt="" class="w-9 h-9 rounded-xl object-cover">
+                    <span class="min-w-0">
+                        <span class="block text-xs font-extrabold truncate max-w-[8rem]">${this.escapeHtml(sessionExercise.exerciseName)}</span>
+                        <span class="block text-[9px] font-bold uppercase tracking-wider text-app-muted">${this.escapeHtml(sessionExercise.muscleGroup)}</span>
+                    </span>
+                </button>
+                <button type="button" class="w-9 h-12 flex items-center justify-center text-app-muted hover:text-rose-400" data-action="active-workout#removeExercise" data-session-exercise-id="${sessionExercise.id}" aria-label="Supprimer ${this.escapeAttribute(sessionExercise.exerciseName)}">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        `;
     }
 
     markActivePill(sessionExerciseId) {
         this.exerciseStripTarget.querySelectorAll('[data-session-exercise-id]').forEach((pill) => {
+            if (!pill.matches('[data-action="active-workout#switchExercise"]')) {
+                return;
+            }
+
             const active = Number.parseInt(pill.dataset.sessionExerciseId, 10) === sessionExerciseId;
-            pill.classList.toggle('bg-app-accent', active);
-            pill.classList.toggle('text-black', active);
-            pill.classList.toggle('border-app-accent', active);
-            pill.classList.toggle('glass-panel', !active);
-            pill.classList.toggle('text-white', !active);
-            pill.classList.toggle('border-white/10', !active);
+            const row = pill.closest('[data-session-exercise-row]');
+            const muscleLabel = pill.querySelector('.text-app-muted, .text-black\\/60');
+            const deleteButton = row?.querySelector('[data-action="active-workout#removeExercise"]');
+
+            row?.classList.toggle('bg-app-accent', active);
+            row?.classList.toggle('text-black', active);
+            row?.classList.toggle('border-app-accent', active);
+            row?.classList.toggle('glass-panel', !active);
+            row?.classList.toggle('text-white', !active);
+            row?.classList.toggle('border-white/10', !active);
+            muscleLabel?.classList.toggle('text-black/60', active);
+            muscleLabel?.classList.toggle('text-app-muted', !active);
+            deleteButton?.classList.toggle('text-black/55', active);
+            deleteButton?.classList.toggle('hover:text-black', active);
+            deleteButton?.classList.toggle('text-app-muted', !active);
+            deleteButton?.classList.toggle('hover:text-rose-400', !active);
         });
     }
 

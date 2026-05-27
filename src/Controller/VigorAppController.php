@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Service\Dashboard\DashboardService;
 use App\Service\Exercise\ExerciseCatalogService;
 use App\Service\Profile\ProfileStatsService;
+use App\Service\Stats\StatsAnalyticsService;
 use App\Service\Workout\ActiveWorkoutViewService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +21,7 @@ final class VigorAppController extends AbstractController
         ExerciseCatalogService $exerciseCatalogService,
         ActiveWorkoutViewService $activeWorkoutViewService,
         ProfileStatsService $profileStatsService,
+        StatsAnalyticsService $statsAnalyticsService,
         Request $request,
         string $view = 'home',
     ): Response {
@@ -27,6 +29,8 @@ final class VigorAppController extends AbstractController
         $exerciseCatalog = $exerciseCatalogService->build();
         $activeWorkout = $activeWorkoutViewService->build((int) $request->query->get('exercise', 0));
         $profileView = $profileStatsService->build();
+        $statsPeriod = $request->query->get('period', 'week');
+        $statsPeriod = \in_array($statsPeriod, ['week', 'month', 'quarter'], true) ? $statsPeriod : 'week';
 
         return $this->render('vigor_app/index.html.twig', [
             'activeView' => $view,
@@ -43,6 +47,7 @@ final class VigorAppController extends AbstractController
             'profileStats' => $profileView['stats'],
             'badges' => $profileView['badges'],
             'profileSettings' => $profileView['settings'],
+            'statsAnalytics' => $statsAnalyticsService->build($statsPeriod),
         ]);
     }
 }

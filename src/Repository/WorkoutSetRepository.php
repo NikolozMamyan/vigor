@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\UserProfile;
+use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
 use App\Entity\WorkoutSet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -24,10 +25,12 @@ final class WorkoutSetRepository extends ServiceEntityRepository implements Work
             ->join('workoutSet.sessionExercise', 'sessionExercise')
             ->join('sessionExercise.session', 'session')
             ->andWhere('session.profile = :profile')
+            ->andWhere('session.status = :sessionStatus')
             ->andWhere('workoutSet.completedAt IS NOT NULL')
             ->andWhere('workoutSet.completedAt >= :from')
             ->andWhere('workoutSet.completedAt < :to')
             ->setParameter('profile', $profile)
+            ->setParameter('sessionStatus', WorkoutSession::STATUS_COMPLETED)
             ->setParameter('from', $from)
             ->setParameter('to', $to)
             ->orderBy('workoutSet.completedAt', 'ASC')
@@ -58,8 +61,10 @@ final class WorkoutSetRepository extends ServiceEntityRepository implements Work
             ->join('workoutSet.sessionExercise', 'sessionExercise')
             ->join('sessionExercise.session', 'session')
             ->andWhere('session.profile = :profile')
+            ->andWhere('session.status = :sessionStatus')
             ->andWhere('workoutSet.completedAt IS NOT NULL')
             ->setParameter('profile', $profile)
+            ->setParameter('sessionStatus', WorkoutSession::STATUS_COMPLETED)
             ->getQuery()
             ->getSingleScalarResult() ?? 0);
     }
