@@ -1,154 +1,311 @@
-<section id="view-workout" class="tab-content {{ activeView == 'workout' ? 'active' }} px-0 space-y-6" data-vigor-navigation-target="view" data-view="workout" data-controller="active-workout" data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}" data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}" data-active-workout-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
+{#
+    templates/vigor_app/views/_workout.html.twig
+
+    Vue principale de la page workout.
+    - Si une séance est active : affiche l'exercice courant + ses séries
+    - Sinon : affiche la liste des programmes + CTA séance libre
+
+    Targets Stimulus ajoutées sur active-workout :
+    - progressBar, progressLabel, progressPercent : pour la barre de progression
+    - exercisePill (multiple) : pour marquer les exercices completés
+#}
+
+<section id="view-workout"
+         class="tab-content {{ activeView == 'workout' ? 'active' }} px-0 space-y-0"
+         data-vigor-navigation-target="view"
+         data-view="workout"
+         data-controller="active-workout"
+         data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}"
+         data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}"
+         data-active-workout-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
+
     {% if activeWorkout.hasActiveSession is not defined or activeWorkout.hasActiveSession %}
-    <div class="relative w-full h-80 -mt-24">
-        <img src="{{ activeWorkout.image }}" alt="Seance {{ activeWorkout.title }}" class="w-full h-full object-cover opacity-60 mix-blend-luminosity" data-active-workout-target="heroImage">
-        <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-[#050505]"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent"></div>
-        <div class="absolute top-28 left-6 flex gap-2">
-            <span class="glass-panel px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase tracking-widest border-white/20 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse"></span> {{ activeWorkout.statusLabel }}
-            </span>
-        </div>
-        <div class="absolute bottom-4 left-6 right-6">
-            <span class="text-app-accent text-[10px] font-bold uppercase tracking-widest mb-2 block" data-active-workout-target="exerciseMeta">Exercice {{ activeWorkout.exercisePosition }}/{{ activeWorkout.exerciseCount }} - {{ activeWorkout.equipment }}</span>
-            <h2 class="text-4xl font-extrabold text-white leading-tight drop-shadow-lg" data-active-workout-target="headerTitle">{{ activeWorkout.headerTitle|default(activeWorkout.sessionName|default('Seance libre')) }}</h2>
-            <p class="mt-2 text-sm font-semibold text-white/80" data-active-workout-target="headerSubtitle">{{ activeWorkout.headerSubtitle|default(activeWorkout.title) }}</p>
-        </div>
-    </div>
 
-    <div class="px-6 space-y-4">
-        <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6" data-swipe-ignore data-active-workout-target="exerciseStrip">
-            {% for item in activeWorkout.exerciseList|default([]) %}
-                <div class="shrink-0 rounded-2xl border flex items-center gap-1 overflow-hidden {{ item.active ? 'bg-app-accent text-black border-app-accent' : 'glass-panel text-white border-white/10' }}" data-session-exercise-row="{{ item.id }}">
-                    <button type="button" class="min-w-0 p-2 pr-2 text-left flex items-center gap-2" data-action="active-workout#switchExercise" data-session-exercise-id="{{ item.id }}">
-                        <img src="{{ item.image }}" alt="" class="w-9 h-9 rounded-xl object-cover">
-                        <span class="min-w-0">
-                            <span class="block text-xs font-extrabold truncate max-w-[8rem]">{{ item.name }}</span>
-                            <span class="block text-[9px] font-bold uppercase tracking-wider {{ item.active ? 'text-black/60' : 'text-app-muted' }}">{{ item.muscleGroup }}</span>
-                        </span>
-                    </button>
-                    <button type="button" class="w-9 h-12 flex items-center justify-center {{ item.active ? 'text-black/55 hover:text-black' : 'text-app-muted hover:text-rose-400' }}" data-action="active-workout#removeExercise" data-session-exercise-id="{{ item.id }}" aria-label="Supprimer {{ item.name }}">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
+        {# ============================================================
+           HERO — image + progression ring + meta + bouton annuler discret
+           ============================================================ #}
+        <div class="relative w-full h-[22rem] -mt-24 overflow-hidden">
+            <img src="{{ activeWorkout.image }}"
+                 alt="Séance {{ activeWorkout.title }}"
+                 class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-luminosity scale-110 transition-transform duration-[2s]"
+                 data-active-workout-target="heroImage">
+
+            {# Vignetting + scrim bas pour lisibilité texte #}
+            <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-[#050505]"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-transparent"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.6)_100%)]"></div>
+
+            {# Top bar : statut + bouton annuler discret #}
+            <div class="absolute top-28 left-0 right-0 px-6 flex items-center justify-between">
+                <span class="glass-panel px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase tracking-widest border-white/20 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse"></span>
+                    {{ activeWorkout.statusLabel }}
+                </span>
+                <button type="button"
+                        class="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-rose-400 transition-colors"
+                        data-action="active-workout#cancelSession"
+                        aria-label="Annuler la séance">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            {# Header bas avec ring de progression intégré #}
+            <div class="absolute bottom-5 left-6 right-6 flex items-end gap-4">
+                <div class="flex-1 min-w-0">
+                    <span class="text-app-accent text-[10px] font-bold uppercase tracking-widest mb-2 block"
+                          data-active-workout-target="exerciseMeta">
+                        Exercice {{ activeWorkout.exercisePosition }}/{{ activeWorkout.exerciseCount }} · {{ activeWorkout.equipment }}
+                    </span>
+                    <h2 class="text-3xl font-extrabold text-white leading-tight drop-shadow-lg truncate"
+                        data-active-workout-target="headerTitle">
+                        {{ activeWorkout.headerTitle|default(activeWorkout.sessionName|default('Séance libre')) }}
+                    </h2>
+                    <p class="mt-1 text-sm font-semibold text-white/70 truncate"
+                       data-active-workout-target="headerSubtitle">
+                        {{ activeWorkout.headerSubtitle|default(activeWorkout.title) }}
+                    </p>
                 </div>
-            {% endfor %}
-        </div>
 
-        <div class="flex justify-between items-end mb-2">
-            <h3 class="text-sm font-semibold text-app-muted uppercase tracking-wider">Objectif : <span data-active-workout-target="targetLabel">{{ activeWorkout.targetLabel }}</span></h3>
-            <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1 rounded-full flex items-center gap-1.5" data-action="active-workout#openExerciseModal">
-                <i data-lucide="plus" class="w-3 h-3"></i> Exercice
-            </button>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-            <button type="button" class="glass-panel rounded-2xl px-4 py-3 text-xs font-bold text-app-muted hover:text-white hover:bg-white/5 transition-colors" data-action="active-workout#cancelSession">
-                Annuler
-            </button>
-            <button type="button" class="rounded-2xl px-4 py-3 text-xs font-extrabold text-black bg-app-accent shadow-neon hover:scale-[1.02] transition-transform" data-action="active-workout#completeSession">
-                Terminer
-            </button>
-        </div>
-
-        <div class="space-y-4" data-active-workout-target="sets">
-            {% for set in activeWorkout.sets %}
-                <div
-                    class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative {{ set.completed ? 'checked' }}"
-                    data-controller="workout-set"
-                    data-workout-set-id-value="{{ set.id ?? 0 }}"
-                    data-workout-set-session-exercise-id-value="{{ set.sessionExerciseId ?? 0 }}"
-                    data-workout-set-position-value="{{ set.number }}"
-                >
-                    <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie {{ set.number }}" data-action="workout-set#remove">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                    <div class="flex items-center gap-4">
-                        <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">{{ set.number }}</div>
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: {{ set.previous }}</span>
-                            <div class="flex items-baseline gap-1">
-                                <input type="number" inputmode="decimal" value="{{ set.weight }}" placeholder="80" aria-label="Poids serie {{ set.number }}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                                <span class="text-app-muted font-medium text-sm mr-2">kg</span>
-                                <span class="text-white/30 text-lg mx-1">x</span>
-                                <input type="number" inputmode="numeric" value="{{ set.reps }}" placeholder="8" aria-label="Repetitions serie {{ set.number }}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                                <span class="text-app-muted font-medium text-sm">reps</span>
-                            </div>
-                        </div>
+                {# Ring de progression circulaire — calculé en JS au mount #}
+                <div class="progress-ring shrink-0 relative w-20 h-20" data-active-workout-target="progressRing">
+                    <svg class="w-20 h-20 -rotate-90" viewBox="0 0 80 80" aria-hidden="true">
+                        <circle cx="40" cy="40" r="34" fill="none"
+                                stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+                        <circle cx="40" cy="40" r="34" fill="none"
+                                stroke="url(#progressGradient)" stroke-width="6"
+                                stroke-linecap="round"
+                                stroke-dasharray="213.6"
+                                stroke-dashoffset="213.6"
+                                class="transition-[stroke-dashoffset] duration-500 ease-out"
+                                data-active-workout-target="progressCircle"/>
+                        <defs>
+                            <linearGradient id="progressGradient" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="var(--color-app-accent, #c4ff3e)"/>
+                                <stop offset="100%" stop-color="#06b6d4"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-lg font-extrabold text-white leading-none"
+                              data-active-workout-target="progressPercent">0%</span>
+                        <span class="text-[8px] font-bold text-app-muted uppercase tracking-wider mt-0.5"
+                              data-active-workout-target="progressLabel">0/0</span>
                     </div>
-                    <button type="button" class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
-                        <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
-                    </button>
                 </div>
-            {% endfor %}
+            </div>
         </div>
 
-        <button type="button" class="w-full py-4 text-xs font-bold text-app-muted hover:text-white border border-dashed border-white/20 rounded-2xl flex items-center justify-center gap-2 transition-colors mt-2 bg-white/5 hover:bg-white/10" data-action="active-workout#addSet">
-            <i data-lucide="plus" class="w-4 h-4"></i> AJOUTER UNE SERIE
-        </button>
+        {# ============================================================
+           CONTENU PRINCIPAL — strip exos, sets, actions
+           ============================================================ #}
+        <div class="px-6 space-y-5 pt-2 pb-32">
 
-        <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" data-active-workout-target="exerciseModal">
-            <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" data-action="click->active-workout#closeExerciseModal"></div>
+            {# Strip horizontale des exercices — avec état "complété" #}
+            <div class="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6"
+                 data-swipe-ignore
+                 data-active-workout-target="exerciseStrip">
+                {% for item in activeWorkout.exerciseList|default([]) %}
+                    <div class="exercise-pill shrink-0 rounded-2xl border flex items-center gap-1 overflow-hidden transition-all duration-300
+                                {{ item.active ? 'bg-app-accent text-black border-app-accent scale-[1.02]' : 'glass-panel text-white border-white/10' }}
+                                {{ item.completed ?? false ? 'pill-completed' : '' }}"
+                         data-session-exercise-row="{{ item.id }}"
+                         data-completed="{{ item.completed ?? false ? '1' : '0' }}">
+
+                        <button type="button"
+                                class="min-w-0 p-2 text-left flex items-center gap-2 relative"
+                                data-action="active-workout#switchExercise"
+                                data-session-exercise-id="{{ item.id }}">
+                            <span class="relative shrink-0">
+                                <img src="{{ item.image }}" alt="" class="w-9 h-9 rounded-xl object-cover">
+                                {% if item.completed ?? false %}
+                                    <span class="absolute inset-0 rounded-xl bg-emerald-500/80 flex items-center justify-center">
+                                        <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                                    </span>
+                                {% endif %}
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-xs font-extrabold truncate max-w-[8rem]">{{ item.name }}</span>
+                                <span class="block text-[9px] font-bold uppercase tracking-wider {{ item.active ? 'text-black/60' : 'text-app-muted' }}">{{ item.muscleGroup }}</span>
+                            </span>
+                        </button>
+                        <button type="button"
+                                class="w-9 h-12 flex items-center justify-center {{ item.active ? 'text-black/55 hover:text-black' : 'text-app-muted hover:text-rose-400' }}"
+                                data-action="active-workout#removeExercise"
+                                data-session-exercise-id="{{ item.id }}"
+                                aria-label="Supprimer {{ item.name }}">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+
+                {# CTA ajouter exercice intégré dans la strip — plus naturel #}
+                <button type="button"
+                        class="shrink-0 rounded-2xl border border-dashed border-white/20 px-4 h-[3.25rem] flex items-center gap-2 text-app-muted hover:text-app-accent hover:border-app-accent/60 transition-colors"
+                        data-action="active-workout#openExerciseModal">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span class="text-[11px] font-bold uppercase tracking-wider">Exercice</span>
+                </button>
+            </div>
+
+            {# Objectif + compteur séries #}
+            <div class="flex items-end justify-between">
+                <div>
+                    <p class="text-[9px] font-bold text-app-muted uppercase tracking-widest">Objectif</p>
+                    <p class="text-lg font-extrabold text-white" data-active-workout-target="targetLabel">
+                        {{ activeWorkout.targetLabel }}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-bold text-app-muted uppercase tracking-widest">Séries</p>
+                    <p class="text-lg font-extrabold text-white">
+                        <span data-active-workout-target="exerciseSetsDone">0</span><span class="text-app-muted">/<span data-active-workout-target="exerciseSetsTotal">0</span></span>
+                    </p>
+                </div>
+            </div>
+
+            {# Liste des séries avec swipe-to-delete #}
+            <div class="space-y-3" data-active-workout-target="sets">
+                {% for set in activeWorkout.sets %}
+                    {{ include('vigor_app/_partials/workout_set_row.html.twig', { set: set }) }}
+                {% endfor %}
+            </div>
+
+            {# Bouton ajouter série #}
+            <button type="button"
+                    class="w-full py-4 text-xs font-bold text-app-muted hover:text-app-accent border border-dashed border-white/15 hover:border-app-accent/40 rounded-2xl flex items-center justify-center gap-2 transition-colors bg-white/[0.02] hover:bg-app-accent/5"
+                    data-action="active-workout#addSet">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span class="uppercase tracking-wider">Ajouter une série</span>
+            </button>
+        </div>
+
+        {# ============================================================
+           CTA STICKY "TERMINER" — toujours accessible
+           ============================================================ #}
+        <div class="fixed bottom-0 left-0 right-0 z-40 px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 pointer-events-none">
+            <div class="max-w-md mx-auto pointer-events-auto">
+                <button type="button"
+                        class="finish-cta w-full rounded-2xl px-6 py-4 text-sm font-extrabold text-black bg-app-accent shadow-neon flex items-center justify-center gap-3 transition-transform active:scale-95"
+                        data-action="active-workout#completeSession"
+                        data-active-workout-target="finishButton">
+                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                    <span data-active-workout-target="finishLabel">Terminer la séance</span>
+                </button>
+            </div>
+        </div>
+
+        {# ============================================================
+           TOAST UNDO — après swipe-delete
+           ============================================================ #}
+        <div class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 opacity-0 pointer-events-none translate-y-4 transition-all duration-300"
+             data-active-workout-target="undoToast">
+            <div class="glass-panel rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl border border-white/15">
+                <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+                <span class="text-xs font-bold text-white">Série supprimée</span>
+                <button type="button"
+                        class="text-app-accent text-xs font-extrabold uppercase tracking-wider ml-2"
+                        data-action="active-workout#undoDelete">
+                    Annuler
+                </button>
+            </div>
+        </div>
+
+        {# ============================================================
+           MODAL AJOUT EXERCICE
+           ============================================================ #}
+        <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300"
+             data-active-workout-target="exerciseModal">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl"
+                 data-action="click->active-workout#closeExerciseModal"></div>
             <div class="absolute left-0 right-0 bottom-0 mx-auto max-w-md rounded-t-[2rem] bg-[#0b0b0d]/95 border border-white/10 shadow-[0_-24px_80px_rgba(0,0,0,0.85)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
                 <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20"></div>
                 <div class="flex items-start justify-between gap-4 mb-4">
                     <div>
-                        <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Seance libre</p>
+                        <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Séance libre</p>
                         <h3 class="text-2xl font-extrabold text-white">Ajouter un exercice</h3>
                     </div>
-                    <button type="button" class="w-10 h-10 rounded-full bg-white/5 text-app-muted hover:text-white flex items-center justify-center" data-action="active-workout#closeExerciseModal" aria-label="Fermer">
+                    <button type="button"
+                            class="w-10 h-10 rounded-full bg-white/5 text-app-muted hover:text-white flex items-center justify-center"
+                            data-action="active-workout#closeExerciseModal"
+                            aria-label="Fermer">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
                 <div class="relative mb-3">
                     <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
-                    <input type="search" placeholder="Chercher dans la bibliotheque" class="w-full rounded-2xl bg-white/[0.06] border border-white/10 pl-11 pr-4 py-4 text-sm font-bold text-white focus:outline-none focus:border-app-accent" data-active-workout-target="exerciseSearch" data-action="input->active-workout#renderExerciseOptions">
+                    <input type="search"
+                           placeholder="Chercher dans la bibliothèque"
+                           class="w-full rounded-2xl bg-white/[0.06] border border-white/10 pl-11 pr-4 py-4 text-sm font-bold text-white focus:outline-none focus:border-app-accent"
+                           data-active-workout-target="exerciseSearch"
+                           data-action="input->active-workout#renderExerciseOptions">
                 </div>
-                <div class="max-h-[48vh] overflow-y-auto space-y-2 pr-1" data-active-workout-target="exerciseOptions"></div>
+                <div class="max-h-[48vh] overflow-y-auto space-y-2 pr-1"
+                     data-active-workout-target="exerciseOptions"></div>
             </div>
         </div>
-    </div>
+
     {% else %}
-        <div class="px-6 pt-4 space-y-5" data-controller="workout-programs" data-workout-programs-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
-            <div class="relative overflow-hidden glass-panel rounded-[2rem] p-6 min-h-[220px] flex flex-col justify-end">
-                <div class="absolute inset-0 bg-gradient-to-br from-app-accent/15 via-transparent to-cyan-400/10"></div>
-                <div class="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-app-accent/20 blur-[50px]"></div>
+
+        {# ============================================================
+           ÉCRAN VIDE — pas de séance active
+           ============================================================ #}
+        <div class="px-6 pt-4 space-y-6"
+             data-controller="workout-programs"
+             data-workout-programs-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
+
+            {# Hero : animation gradient + iconographie #}
+            <div class="relative overflow-hidden glass-panel rounded-[2rem] p-6 min-h-[240px] flex flex-col justify-end">
+                <div class="absolute inset-0 bg-gradient-to-br from-app-accent/20 via-transparent to-cyan-400/15 animate-gradient-shift"></div>
+                <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-app-accent/25 blur-[60px] animate-pulse-slow"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-cyan-400/15 blur-[60px]"></div>
                 <div class="relative z-10">
                     <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-app-muted mb-4">
-                        <i data-lucide="pause-circle" class="w-3 h-3"></i> Aucune seance active
+                        <i data-lucide="pause-circle" class="w-3 h-3"></i> Aucune séance active
                     </span>
-                    <h2 class="text-4xl font-extrabold text-white leading-tight mb-2">Choisis ton <br>depart.</h2>
-                    <p class="text-sm text-app-muted max-w-[18rem]">Selectionne un programme existant ou cree une base simple pour commencer.</p>
+                    <h2 class="text-4xl font-extrabold text-white leading-tight mb-2">Prêt à <br>en découdre ?</h2>
+                    <p class="text-sm text-app-muted max-w-[20rem]">Lance un programme existant ou démarre une séance libre.</p>
                 </div>
             </div>
 
             <div class="flex items-center justify-between px-1">
                 <h3 class="text-sm font-bold text-white uppercase tracking-wider">Programmes</h3>
-                <button type="button" class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1.5 rounded-full flex items-center gap-1.5" data-action="workout-programs#openCreate">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Creer
+                <button type="button"
+                        class="text-app-accent text-xs font-bold bg-app-accent/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-app-accent/20 transition-colors"
+                        data-action="workout-programs#openCreate">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Créer
                 </button>
             </div>
 
             <div class="space-y-3" data-workout-programs-target="list">
                 {% for program in activeWorkout.programs %}
-                    <article class="glass-panel rounded-2xl p-4 space-y-3" data-program-row-id="{{ program.id }}">
+                    <article class="glass-panel rounded-2xl p-4 space-y-3 group hover:border-white/20 transition-colors"
+                             data-program-row-id="{{ program.id }}">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                            <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center group-hover:bg-app-accent/20 transition-colors">
                                 <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h4 class="text-sm font-extrabold text-white truncate">{{ program.name }}</h4>
-                                <p class="text-[11px] text-app-muted">{{ program.description }} - {{ program.meta }}</p>
+                                <p class="text-[11px] text-app-muted">{{ program.description }} · {{ program.meta }}</p>
                             </div>
-                            <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10" data-action="workout-programs#delete" data-program-id="{{ program.id }}" aria-label="Supprimer {{ program.name }}">
+                            <button type="button"
+                                    class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10 transition-colors"
+                                    data-action="workout-programs#delete"
+                                    data-program-id="{{ program.id }}"
+                                    aria-label="Supprimer {{ program.name }}">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
-                            <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="{{ program.id }}" aria-label="Demarrer {{ program.name }}">
+                            <button type="button"
+                                    class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon active:scale-95 transition-transform"
+                                    data-action="workout-programs#start"
+                                    data-program-id="{{ program.id }}"
+                                    aria-label="Démarrer {{ program.name }}">
                                 <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
                             </button>
                         </div>
                         {% if program.exercises is defined and program.exercises %}
                             <div class="space-y-2 border-t border-white/5 pt-3">
-                                {% for exercise in program.exercises %}
+                                {% for exercise in program.exercises|slice(0, 4) %}
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="min-w-0 flex items-center gap-2">
                                             <img src="{{ exercise.image }}" alt="" class="w-8 h-8 rounded-xl object-cover border border-white/10">
@@ -160,6 +317,9 @@
                                         <span class="text-[10px] font-bold text-app-accent whitespace-nowrap">{{ exercise.target }}</span>
                                     </div>
                                 {% endfor %}
+                                {% if program.exercises|length > 4 %}
+                                    <p class="text-[10px] text-app-muted text-center pt-1">+ {{ program.exercises|length - 4 }} autres</p>
+                                {% endif %}
                             </div>
                         {% endif %}
                     </article>
@@ -169,96 +329,25 @@
                             <i data-lucide="clipboard-list" class="w-5 h-5 text-app-muted"></i>
                         </div>
                         <p class="text-sm font-bold text-white mb-1">Aucun programme</p>
-                        <p class="text-xs text-app-muted">Cree ton premier programme pour le demarrer depuis cette page.</p>
+                        <p class="text-xs text-app-muted">Crée ton premier programme pour le démarrer depuis cette page.</p>
                     </div>
                 {% endfor %}
             </div>
 
-            <button type="button" class="w-full rounded-[1.5rem] bg-white/5 border border-white/10 p-4 flex items-center justify-between hover:bg-white/10 transition-colors" data-action="workout-programs#startFree">
+            <button type="button"
+                    class="w-full rounded-[1.5rem] bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-4 flex items-center justify-between hover:from-white/15 hover:to-white/8 transition-all active:scale-[0.99]"
+                    data-action="workout-programs#startFree">
                 <span class="text-left">
-                    <span class="block text-sm font-extrabold text-white">Seance libre</span>
-                    <span class="block text-xs text-app-muted">Demarrer sans programme.</span>
+                    <span class="block text-sm font-extrabold text-white">Séance libre</span>
+                    <span class="block text-xs text-app-muted">Démarre sans programme — choisis au fil.</span>
                 </span>
                 <span class="w-11 h-11 rounded-2xl bg-white/10 text-white flex items-center justify-center">
                     <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
                 </span>
             </button>
 
-            <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
-                <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" data-action="click->workout-programs#closeCreate"></div>
-                <div class="absolute inset-0 mx-auto max-w-md bg-[#050505] border-x border-white/5 shadow-2xl overflow-hidden flex flex-col" data-workout-programs-builder-tab="library">
-                    <header class="shrink-0 pt-[max(2.5rem,env(safe-area-inset-top))] pb-4 px-5 z-20 bg-gradient-to-b from-[#050505] via-[#050505]/95 to-transparent">
-                        <div class="flex items-center justify-between mb-4">
-                            <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-white transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
-                                <i data-lucide="chevron-down" class="w-5 h-5"></i>
-                            </button>
-                            <div class="flex-1 px-4">
-                                <input id="program-name" type="text" value="Push Day - Force" placeholder="Nom du programme" class="neo-input text-lg font-extrabold" data-workout-programs-target="name">
-                            </div>
-                            <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-white transition-colors" data-action="workout-programs#resetCreateForm" aria-label="Reinitialiser">
-                                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-
-                        <div class="flex p-1 bg-white/5 rounded-2xl relative">
-                            <div class="builder-tab-indicator absolute top-1 bottom-1 w-[calc(50%-0.25rem)] bg-white/10 rounded-xl transition-all duration-300 ease-out left-1 border border-white/10"></div>
-                            <button type="button" class="builder-tab-button flex-1 py-2.5 text-sm font-bold text-white relative z-10 transition-colors" data-builder-tab-button="library" data-action="workout-programs#showLibrary">Bibliotheque</button>
-                            <button type="button" class="builder-tab-button flex-1 py-2.5 text-sm font-bold text-app-muted relative z-10 transition-colors flex items-center justify-center gap-2" data-builder-tab-button="config" data-action="workout-programs#showConfig">
-                                Reglages
-                                <span class="builder-config-badge hidden bg-app-accent text-black text-[10px] px-1.5 py-0.5 rounded-full font-extrabold leading-none">0</span>
-                            </button>
-                        </div>
-                    </header>
-
-                    <main class="flex-1 overflow-y-auto no-scrollbar pb-28 relative">
-                        <div class="builder-tab-content active px-5 space-y-5" data-builder-tab="library">
-                            <div class="sticky top-0 z-10 pb-2 pt-1 bg-[#050505]">
-                                <div class="relative">
-                                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
-                                    <input id="program-exercise-search" type="search" placeholder="Chercher un exercice..." class="w-full rounded-2xl glass-panel pl-11 pr-4 py-3.5 text-sm font-bold text-white focus:border-app-accent outline-none transition-colors" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
-                                </div>
-                                <div class="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1" data-workout-programs-target="counter">
-                                    <button type="button" class="shrink-0 px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold border border-white/10">0 selection</button>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3" data-workout-programs-target="exerciseOptions"></div>
-                        </div>
-
-                        <div class="builder-tab-content px-5 space-y-4" data-builder-tab="config">
-                            <div class="mt-10 flex flex-col items-center justify-center text-center opacity-60" data-workout-programs-target="emptySelection">
-                                <div class="w-16 h-16 rounded-full glass-panel flex items-center justify-center mb-4">
-                                    <i data-lucide="dumbbell" class="w-8 h-8 text-app-muted"></i>
-                                </div>
-                                <p class="font-bold text-white">Aucun exercice</p>
-                                <p class="text-xs text-app-muted mt-1">Selectionne des exercices dans la bibliotheque</p>
-                                <button type="button" class="mt-4 px-5 py-2 rounded-full glass-panel text-xs font-bold text-white" data-action="workout-programs#showLibrary">Aller a la bibliotheque</button>
-                            </div>
-
-                            <div class="space-y-3 pb-8" data-workout-programs-target="selectedList"></div>
-                        </div>
-                    </main>
-
-                    <nav class="builder-bottom-nav app-bottom-nav fixed left-1/2 -translate-x-1/2 w-[85%] max-w-[320px] glass-panel rounded-full z-50 shadow-2xl border border-white/20 backdrop-blur-3xl" aria-label="Selection du programme">
-                        <div class="flex items-center justify-between gap-2 px-2 py-2">
-                            <div class="flex min-w-0 items-center gap-3 pl-2">
-                                <div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center relative shrink-0">
-                                    <i data-lucide="layers" class="w-5 h-5 text-white"></i>
-                                    <span class="builder-floating-counter absolute -top-1 -right-1 bg-app-accent text-black text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-extrabold border-2 border-[#050505] transition-transform duration-300 scale-0">0</span>
-                                </div>
-                                <div class="min-w-0">
-                                    <span class="block text-[9px] font-bold text-app-muted uppercase tracking-widest">Selection</span>
-                                    <span class="builder-floating-text block text-xs font-extrabold text-white truncate">0 exercice</span>
-                                </div>
-                            </div>
-
-                            <button type="button" class="builder-main-action btn-press h-12 px-5 rounded-full bg-white/10 text-white text-sm font-extrabold transition-all duration-300 shrink-0" data-action="workout-programs#mainAction">
-                                Configurer
-                            </button>
-                        </div>
-                    </nav>
-                </div>
-            </div>
+            {# Builder modal — extrait en partial (workout-programs.js intact) #}
+            {{ include('vigor_app/_partials/workout_programs_builder.html.twig') }}
         </div>
     {% endif %}
 </section>
