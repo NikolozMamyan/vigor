@@ -106,7 +106,7 @@ export default class extends Controller {
         }));
 
         if (pushState && view !== previousView) {
-            this.refreshViews({ views: [view], nextView: view, path: `/app/${view}` });
+            this.refreshViews({ views: [view], nextView: view, path: `/app/${view}`, background: true });
             this.queueBackgroundRefresh(this.views.filter((item) => item !== view));
         }
     }

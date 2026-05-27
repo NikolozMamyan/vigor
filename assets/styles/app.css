@@ -151,7 +151,10 @@ body {
     inset: 0;
     z-index: 60;
     padding: max(6rem, calc(env(safe-area-inset-top) + 5rem)) 1.5rem max(9rem, calc(env(safe-area-inset-bottom) + 8rem));
-    background: #050505;
+    background:
+        radial-gradient(circle at 20% 8%, rgba(204, 255, 0, 0.08), transparent 32%),
+        radial-gradient(circle at 90% 34%, rgba(0, 240, 255, 0.07), transparent 30%),
+        #050505;
     overflow: hidden;
     pointer-events: none;
     transition: opacity 0.16s ease;
@@ -216,8 +219,21 @@ body {
 }
 
 .app-skeleton-hero {
-    height: 10rem;
-    border-radius: 1.75rem;
+    position: relative;
+    height: 9.5rem;
+    border-radius: 2rem;
+    overflow: hidden;
+}
+
+.app-skeleton-hero::after {
+    content: '';
+    position: absolute;
+    left: 1.25rem;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    height: 0.75rem;
+    border-radius: 999px;
+    background: rgba(5, 5, 5, 0.22);
 }
 
 .app-skeleton-tile {
@@ -226,9 +242,9 @@ body {
 }
 
 .app-skeleton-row {
-    height: 4rem;
+    height: 4.25rem;
     margin-top: 1rem;
-    border-radius: 1.25rem;
+    border-radius: 1.5rem;
 }
 
 .app-skeleton-row.short {
