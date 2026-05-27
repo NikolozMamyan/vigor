@@ -184,58 +184,77 @@
 
             <div class="fixed inset-0 z-[90] opacity-0 pointer-events-none transition-opacity duration-300" data-workout-programs-target="modal">
                 <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" data-action="click->workout-programs#closeCreate"></div>
-                <div class="absolute left-0 right-0 bottom-0 mx-auto max-w-md max-h-[92vh] overflow-hidden rounded-t-[2rem] bg-[#0b0b0d]/95 border border-white/10 shadow-[0_-24px_80px_rgba(0,0,0,0.85)]">
-                    <div class="sticky top-0 z-10 bg-[#0b0b0d]/95 backdrop-blur-2xl px-5 pt-3 pb-4 border-b border-white/5">
-                        <div class="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20"></div>
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-[10px] font-bold text-app-accent uppercase tracking-widest mb-1">Nouveau programme</p>
-                                <h3 class="text-2xl font-extrabold text-white">Construire ta seance</h3>
+                <div class="absolute inset-0 mx-auto max-w-md bg-[#050505] border-x border-white/5 shadow-2xl overflow-hidden flex flex-col" data-workout-programs-builder-tab="library">
+                    <header class="shrink-0 pt-[max(2.5rem,env(safe-area-inset-top))] pb-4 px-5 z-20 bg-gradient-to-b from-[#050505] via-[#050505]/95 to-transparent">
+                        <div class="flex items-center justify-between mb-4">
+                            <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-white transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
+                                <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                            </button>
+                            <div class="flex-1 px-4">
+                                <input id="program-name" type="text" value="Push Day - Force" placeholder="Nom du programme" class="neo-input text-lg font-extrabold" data-workout-programs-target="name">
                             </div>
-                            <button type="button" class="w-10 h-10 rounded-full bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" data-action="workout-programs#closeCreate" aria-label="Fermer">
-                                <i data-lucide="x" class="w-4 h-4"></i>
+                            <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-white transition-colors" data-action="workout-programs#resetCreateForm" aria-label="Reinitialiser">
+                                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
                             </button>
                         </div>
-                    </div>
 
-                    <div class="overflow-y-auto max-h-[calc(92vh-6rem)] px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
-                            <label class="block text-[10px] text-app-muted font-bold uppercase tracking-widest mb-2" for="program-name">Nom du programme</label>
-                            <input id="program-name" type="text" value="Mon programme" class="w-full rounded-2xl bg-black/20 border border-white/10 px-4 py-4 text-white font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="name">
+                        <div class="flex p-1 bg-white/5 rounded-2xl relative">
+                            <div class="builder-tab-indicator absolute top-1 bottom-1 w-[calc(50%-0.25rem)] bg-white/10 rounded-xl transition-all duration-300 ease-out left-1 border border-white/10"></div>
+                            <button type="button" class="builder-tab-button flex-1 py-2.5 text-sm font-bold text-white relative z-10 transition-colors" data-builder-tab-button="library" data-action="workout-programs#showLibrary">Bibliotheque</button>
+                            <button type="button" class="builder-tab-button flex-1 py-2.5 text-sm font-bold text-app-muted relative z-10 transition-colors flex items-center justify-center gap-2" data-builder-tab-button="config" data-action="workout-programs#showConfig">
+                                Reglages
+                                <span class="builder-config-badge hidden bg-app-accent text-black text-[10px] px-1.5 py-0.5 rounded-full font-extrabold leading-none">0</span>
+                            </button>
                         </div>
+                    </header>
 
-                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <p class="text-[10px] text-app-muted font-bold uppercase tracking-widest">Bibliotheque</p>
-                                    <p class="text-sm font-extrabold text-white">Choisis tes exercices</p>
+                    <main class="flex-1 overflow-y-auto no-scrollbar pb-28 relative">
+                        <div class="builder-tab-content active px-5 space-y-5" data-builder-tab="library">
+                            <div class="sticky top-0 z-10 pb-2 pt-1 bg-[#050505]">
+                                <div class="relative">
+                                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
+                                    <input id="program-exercise-search" type="search" placeholder="Chercher un exercice..." class="w-full rounded-2xl glass-panel pl-11 pr-4 py-3.5 text-sm font-bold text-white focus:border-app-accent outline-none transition-colors" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
                                 </div>
-                                <span class="rounded-full bg-app-accent/10 border border-app-accent/20 px-3 py-1 text-[10px] text-app-accent font-bold" data-workout-programs-target="counter">0 selection</span>
-                            </div>
-                            <div class="relative mb-3">
-                                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-app-muted"></i>
-                                <input id="program-exercise-search" type="search" placeholder="Chercher un exercice" class="w-full rounded-2xl bg-black/20 border border-white/10 pl-11 pr-4 py-3 text-white text-sm font-bold focus:outline-none focus:border-app-accent" data-workout-programs-target="search" data-action="input->workout-programs#filterExercises">
-                            </div>
-                            <div class="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1" data-workout-programs-target="exerciseOptions"></div>
-                        </div>
-
-                        <div class="rounded-3xl bg-white/[0.04] border border-white/10 p-4 mb-4">
-                            <div class="mb-3">
-                                <p class="text-[10px] text-app-muted font-bold uppercase tracking-widest">Objectifs</p>
-                                <p class="text-sm font-extrabold text-white">Poids, series et reps</p>
-                            </div>
-                            <div class="space-y-3" data-workout-programs-target="selectedList">
-                                <div class="rounded-2xl border border-dashed border-white/15 bg-black/20 p-4 text-center" data-workout-programs-target="emptySelection">
-                                    <p class="text-xs font-bold text-white mb-1">Aucun exercice selectionne</p>
-                                    <p class="text-[10px] text-app-muted">Ajoute un exercice depuis la bibliotheque au-dessus.</p>
+                                <div class="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1" data-workout-programs-target="counter">
+                                    <button type="button" class="shrink-0 px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold border border-white/10">0 selection</button>
                                 </div>
                             </div>
+
+                            <div class="grid grid-cols-2 gap-3" data-workout-programs-target="exerciseOptions"></div>
                         </div>
 
-                        <button type="button" class="sticky bottom-0 w-full rounded-2xl bg-app-accent text-black py-4 text-sm font-extrabold shadow-neon" data-action="workout-programs#create">
-                            Creer le programme
-                        </button>
-                    </div>
+                        <div class="builder-tab-content px-5 space-y-4" data-builder-tab="config">
+                            <div class="mt-10 flex flex-col items-center justify-center text-center opacity-60" data-workout-programs-target="emptySelection">
+                                <div class="w-16 h-16 rounded-full glass-panel flex items-center justify-center mb-4">
+                                    <i data-lucide="dumbbell" class="w-8 h-8 text-app-muted"></i>
+                                </div>
+                                <p class="font-bold text-white">Aucun exercice</p>
+                                <p class="text-xs text-app-muted mt-1">Selectionne des exercices dans la bibliotheque</p>
+                                <button type="button" class="mt-4 px-5 py-2 rounded-full glass-panel text-xs font-bold text-white" data-action="workout-programs#showLibrary">Aller a la bibliotheque</button>
+                            </div>
+
+                            <div class="space-y-3 pb-8" data-workout-programs-target="selectedList"></div>
+                        </div>
+                    </main>
+
+                    <nav class="builder-bottom-nav app-bottom-nav fixed left-1/2 -translate-x-1/2 w-[85%] max-w-[320px] glass-panel rounded-full z-50 shadow-2xl border border-white/20 backdrop-blur-3xl" aria-label="Selection du programme">
+                        <div class="flex items-center justify-between gap-2 px-2 py-2">
+                            <div class="flex min-w-0 items-center gap-3 pl-2">
+                                <div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center relative shrink-0">
+                                    <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+                                    <span class="builder-floating-counter absolute -top-1 -right-1 bg-app-accent text-black text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-extrabold border-2 border-[#050505] transition-transform duration-300 scale-0">0</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="block text-[9px] font-bold text-app-muted uppercase tracking-widest">Selection</span>
+                                    <span class="builder-floating-text block text-xs font-extrabold text-white truncate">0 exercice</span>
+                                </div>
+                            </div>
+
+                            <button type="button" class="builder-main-action btn-press h-12 px-5 rounded-full bg-white/10 text-white text-sm font-extrabold transition-all duration-300 shrink-0" data-action="workout-programs#mainAction">
+                                Configurer
+                            </button>
+                        </div>
+                    </nav>
                 </div>
             </div>
         </div>

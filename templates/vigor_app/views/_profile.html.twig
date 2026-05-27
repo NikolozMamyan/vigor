@@ -1,61 +1,44 @@
 <section id="view-profile" class="tab-content {{ activeView == 'profile' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="profile">
-    <div class="relative pt-4">
-        <div class="glass-panel rounded-[2rem] p-6 text-center relative overflow-hidden">
-            <div class="absolute -top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-app-accent/20 blur-[60px] rounded-full pointer-events-none"></div>
-
-            <div class="relative z-10 flex flex-col items-center">
-                <div class="relative mb-4">
-                    <div class="absolute inset-0 bg-app-accent rounded-full blur-md opacity-40"></div>
-                    <div class="w-24 h-24 rounded-full border-2 border-app-accent overflow-hidden relative z-10">
-                        <img src="{{ profileView.profile.avatarUrl }}" alt="Avatar {{ profileView.profile.displayName }}" class="w-full h-full object-cover">
-                    </div>
-                    <button type="button" class="absolute bottom-0 right-0 w-8 h-8 bg-app-accent text-black rounded-full flex items-center justify-center z-20 shadow-neon hover:scale-110 transition-transform" aria-label="Modifier l'avatar">
-                        <i data-lucide="camera" class="w-4 h-4"></i>
-                    </button>
-                </div>
-
-                <h2 class="text-2xl font-extrabold text-white mb-1">{{ profileView.profile.displayName }}</h2>
-                <p class="text-sm text-app-muted mb-4">@{{ profileView.profile.username }} - Membre depuis {{ profileView.profile.joinedLabel }}</p>
-
-                <div class="flex items-center gap-2 bg-app-accent/10 border border-app-accent/30 rounded-full px-4 py-1.5">
-                    <i data-lucide="award" class="w-4 h-4 text-app-accent"></i>
-                    <span class="text-xs font-bold text-app-accent uppercase tracking-wider">{{ profileView.profile.levelLabel }}</span>
-                </div>
-            </div>
+    <div class="pt-2 flex items-center justify-between">
+        <div>
+            <p class="text-[10px] text-app-muted uppercase font-black tracking-widest mb-1">Profil</p>
+            <h2 class="text-3xl font-black text-white tracking-tight">{{ profileView.profile.displayName }}</h2>
         </div>
+        <img src="{{ profileView.profile.avatarUrl }}" alt="Avatar {{ profileView.profile.displayName }}" class="w-12 h-12 rounded-full border-2 border-app-accent object-cover">
     </div>
 
     <div class="grid grid-cols-2 gap-3">
         {% for stat in profileStats %}
-            <div class="glass-panel rounded-2xl p-4">
-                <div class="flex items-center gap-2 mb-2">
+            <div class="glass-panel rounded-3xl p-4 relative overflow-hidden">
+                <div class="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                     <i data-lucide="{{ stat.icon }}" class="w-4 h-4 text-app-accent"></i>
-                    <p class="text-[10px] text-app-muted uppercase font-bold tracking-wider">{{ stat.label }}</p>
                 </div>
-                <p class="text-2xl font-extrabold text-white tabular-nums">
-                    {{ stat.value }}{% if stat.suffix|default(false) %}<span class="text-sm text-app-muted ml-1">{{ stat.suffix }}</span>{% endif %}
+                <p class="text-2xl font-black text-white tabular-nums leading-none">
+                    {{ stat.value }}{% if stat.suffix|default(false) %}<span class="text-xs text-app-muted ml-1">{{ stat.suffix }}</span>{% endif %}
                 </p>
+                <p class="text-[10px] text-app-muted uppercase font-black tracking-widest mt-1">{{ stat.label }}</p>
             </div>
         {% endfor %}
     </div>
 
-    <div class="glass-panel rounded-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Objectifs hebdo</h3>
-            <span class="text-[10px] text-app-muted font-bold">{{ profileView.weeklyGoal.weekStartDate|default('') }}</span>
+    <div class="glass-panel rounded-[2rem] p-5 space-y-4">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-black text-white uppercase tracking-wider">Objectifs hebdo</h3>
+            <span class="text-[10px] font-black text-app-accent uppercase tracking-widest">Progression</span>
         </div>
+
         {% for goal in [
             {label: 'Seances', current: profileView.weeklyGoal.workouts.current, target: profileView.weeklyGoal.workouts.target, percent: profileView.weeklyGoal.workouts.percent},
             {label: 'Volume', current: (profileView.weeklyGoal.volume.current / 1000)|number_format(1, '.', ''), target: (profileView.weeklyGoal.volume.target / 1000)|number_format(1, '.', ''), percent: profileView.weeklyGoal.volume.percent},
             {label: 'Minutes', current: profileView.weeklyGoal.trainingMinutes.current, target: profileView.weeklyGoal.trainingMinutes.target, percent: profileView.weeklyGoal.trainingMinutes.percent}
         ] %}
-            <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-[11px] text-app-muted font-bold uppercase tracking-wider">{{ goal.label }}</span>
-                    <span class="text-[11px] text-white font-bold tabular-nums">{{ goal.current }}/{{ goal.target }}</span>
+            <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-bold">
+                    <span class="text-white">{{ goal.label }}</span>
+                    <span class="text-app-muted tabular-nums">{{ goal.current }}/{{ goal.target }}</span>
                 </div>
-                <div class="h-2 rounded-full bg-white/5 overflow-hidden">
-                    <div class="h-full rounded-full bg-app-accent" style="width: {{ goal.percent }}%"></div>
+                <div class="h-2 rounded-full bg-white/5 overflow-hidden border border-white/5">
+                    <div class="h-full rounded-full bg-app-accent transition-all duration-1000" style="width: {{ goal.percent }}%"></div>
                 </div>
             </div>
         {% endfor %}
@@ -64,7 +47,7 @@
     <div class="glass-panel rounded-2xl p-5">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-sm font-bold text-white uppercase tracking-wider">Badges</h3>
-            <span class="text-[10px] text-app-muted font-bold">5/12</span>
+            <span class="text-[10px] text-app-muted font-bold">{{ badges|filter(b => not b.locked)|length }}/{{ badges|length }}</span>
         </div>
         <div class="grid grid-cols-4 gap-3">
             {% for badge in badges %}
@@ -91,16 +74,5 @@
                 <i data-lucide="chevron-right" class="w-4 h-4 text-app-muted"></i>
             </button>
         {% endfor %}
-
-        <button type="button" class="w-full flex items-center gap-4 p-4 hover:bg-rose-500/5 transition-colors group">
-            <span class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-                <i data-lucide="log-out" class="w-5 h-5 text-rose-500"></i>
-            </span>
-            <span class="text-left flex-1">
-                <span class="block text-sm font-bold text-rose-500">Deconnexion</span>
-            </span>
-        </button>
     </div>
-
-    <p class="text-center text-[10px] text-app-muted/50 pt-4">VIGOR v1.0.0 - Made with energie</p>
 </section>

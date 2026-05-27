@@ -1,36 +1,37 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['modal', 'display', 'circle'];
+    static targets = ['modal', 'surface', 'minified', 'expanded', 'display', 'miniDisplay', 'canvas'];
 
     connect() {
         this.totalTime = 90;
         this.timeLeft = 90;
         this.interval = null;
-        this.boundCloseOnNavigate = (event) => {
-            if (event.detail.view !== 'workout') {
-                this.close();
-            }
-        };
+        this.expanded = false;
+        this.active = false;
+        this.particles = [];
+        this.particleFrame = null;
+        this.canvasContext = this.hasCanvasTarget ? this.canvasTarget.getContext('2d') : null;
+
         this.boundWorkoutSetTimerStart = () => this.startFromSet();
         this.boundWorkoutSetTimerClose = () => this.close();
+        this.boundResizeCanvas = () => this.resizeCanvas();
 
-        this.element.addEventListener('vigor:navigate', this.boundCloseOnNavigate);
-        this.element.addEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
-        this.element.addEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
+        document.addEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
+        document.addEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
+        window.addEventListener('resize', this.boundResizeCanvas);
+
+        this.resizeCanvas();
         this.update();
+        this.minify();
     }
 
     disconnect() {
         window.clearInterval(this.interval);
-        this.element.removeEventListener('vigor:navigate', this.boundCloseOnNavigate);
-        this.element.removeEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
-        this.element.removeEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
-    }
-
-    toggleSet(event) {
-        const button = event.currentTarget;
-        this.setChecked(button, !button.classList.contains('checked'));
+        window.cancelAnimationFrame(this.particleFrame);
+        document.removeEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
+        document.removeEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
+        window.removeEventListener('resize', this.boundResizeCanvas);
     }
 
     startFromSet() {
@@ -41,73 +42,237 @@ export default class extends Controller {
         this.start();
     }
 
-    setChecked(button, checked) {
-        const row = button.closest('.set-row');
-
-        button.classList.toggle('checked', checked);
-        row?.classList.toggle('checked', checked);
-
-        if (!checked) {
-            this.close();
-            return;
-        }
-
-        if (navigator.vibrate) {
-            navigator.vibrate(50);
-        }
-
-        this.start();
-    }
-
-    start() {
+    start(seconds = 90) {
         window.clearInterval(this.interval);
-        this.totalTime = 90;
-        this.timeLeft = 90;
+        this.totalTime = Number.parseInt(seconds, 10) || 90;
+        this.timeLeft = this.totalTime;
+        this.active = true;
         this.update();
-
-        this.modalTarget.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
-        this.modalTarget.classList.add('translate-y-0', 'opacity-100');
+        this.show();
+        this.expand();
 
         this.interval = window.setInterval(() => {
             this.timeLeft -= 1;
             this.update();
 
             if (this.timeLeft <= 0) {
-                this.close();
-                if (navigator.vibrate) {
-                    navigator.vibrate([100, 50, 100]);
-                }
+                this.finish();
             }
         }, 1000);
     }
 
+    show() {
+        this.modalTarget.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-12');
+        this.modalTarget.classList.add('opacity-100', 'translate-y-0');
+    }
+
     close() {
         window.clearInterval(this.interval);
+        this.active = false;
 
         if (!this.hasModalTarget) {
             return;
         }
 
-        this.modalTarget.classList.remove('translate-y-0', 'opacity-100');
-        this.modalTarget.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+        this.modalTarget.classList.remove('opacity-100', 'translate-y-0', 'is-triggered');
+        this.modalTarget.classList.add('opacity-0', '-translate-y-12', 'pointer-events-none');
+        this.minify();
     }
 
-    addTime() {
-        this.timeLeft = Math.max(0, this.timeLeft + 15);
-        this.totalTime = Math.max(this.totalTime, this.timeLeft);
-        this.update();
-    }
-
-    update() {
-        if (!this.hasDisplayTarget || !this.hasCircleTarget) {
+    expand() {
+        if (!this.hasSurfaceTarget) {
             return;
         }
 
-        const minutes = Math.floor(this.timeLeft / 60).toString().padStart(2, '0');
-        const seconds = (this.timeLeft % 60).toString().padStart(2, '0');
-        this.displayTarget.textContent = `${minutes}:${seconds}`;
+        this.expanded = true;
+        this.surfaceTarget.style.width = '330px';
+        this.surfaceTarget.style.height = '230px';
+        this.surfaceTarget.style.borderRadius = '32px';
 
-        const percentage = (this.timeLeft / this.totalTime) * 100;
-        this.circleTarget.style.strokeDashoffset = 100 - percentage;
+        this.minifiedTarget.classList.add('opacity-0', 'pointer-events-none');
+        this.minifiedTarget.classList.remove('pointer-events-auto');
+
+        window.setTimeout(() => {
+            if (!this.expanded) {
+                return;
+            }
+
+            this.expandedTarget.classList.remove('opacity-0', 'pointer-events-none');
+            this.expandedTarget.classList.add('pointer-events-auto');
+        }, 150);
+    }
+
+    minify() {
+        if (!this.hasSurfaceTarget) {
+            return;
+        }
+
+        this.expanded = false;
+        this.expandedTarget.classList.add('opacity-0', 'pointer-events-none');
+        this.expandedTarget.classList.remove('pointer-events-auto');
+
+        this.surfaceTarget.style.width = '130px';
+        this.surfaceTarget.style.height = '44px';
+        this.surfaceTarget.style.borderRadius = '999px';
+
+        window.setTimeout(() => {
+            if (this.expanded) {
+                return;
+            }
+
+            this.minifiedTarget.classList.remove('opacity-0', 'pointer-events-none');
+            this.minifiedTarget.classList.add('pointer-events-auto');
+        }, 150);
+    }
+
+    skip() {
+        this.timeLeft = 0;
+        this.finish();
+    }
+
+    addTime() {
+        this.adjustTime(10);
+    }
+
+    removeTime() {
+        this.adjustTime(-10);
+    }
+
+    adjustTime(seconds) {
+        this.timeLeft = Math.max(0, this.timeLeft + seconds);
+        this.totalTime = Math.max(this.totalTime, this.timeLeft);
+        this.update();
+
+        if (navigator.vibrate) {
+            navigator.vibrate(25);
+        }
+
+        if (this.timeLeft <= 0) {
+            this.finish();
+        }
+    }
+
+    finish() {
+        if (!this.active) {
+            return;
+        }
+
+        window.clearInterval(this.interval);
+        this.active = false;
+        this.timeLeft = 0;
+        this.update();
+        this.modalTarget.classList.add('is-triggered');
+
+        if (navigator.vibrate) {
+            navigator.vibrate([150, 80, 250, 100, 650]);
+        }
+
+        this.explode();
+
+        window.setTimeout(() => {
+            this.close();
+        }, 2000);
+    }
+
+    update() {
+        if (!this.hasDisplayTarget || !this.hasMiniDisplayTarget) {
+            return;
+        }
+
+        const minutes = Math.floor(Math.max(0, this.timeLeft) / 60).toString().padStart(2, '0');
+        const seconds = (Math.max(0, this.timeLeft) % 60).toString().padStart(2, '0');
+        const formatted = `${minutes}:${seconds}`;
+
+        this.displayTarget.textContent = formatted;
+        this.miniDisplayTarget.textContent = formatted;
+    }
+
+    resizeCanvas() {
+        if (!this.hasCanvasTarget) {
+            return;
+        }
+
+        this.canvasTarget.width = window.innerWidth;
+        this.canvasTarget.height = window.innerHeight;
+    }
+
+    explode() {
+        if (!this.canvasContext) {
+            return;
+        }
+
+        this.resizeCanvas();
+
+        const originX = window.innerWidth / 2;
+        const originY = 76;
+        const colors = ['#ccff00', '#34d399', '#ffffff', '#a7f3d0', '#a3e635'];
+
+        for (let index = 0; index < 100; index += 1) {
+            this.particles.push({
+                x: originX,
+                y: originY,
+                vx: (Math.random() - 0.5) * 30,
+                vy: (Math.random() - 0.5) * 18 - 10,
+                radius: Math.random() * 6 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 1,
+                decay: Math.random() * 0.012 + 0.007,
+                gravity: 0.55,
+                bounce: 0.68,
+            });
+        }
+
+        if (!this.particleFrame) {
+            this.animateParticles();
+        }
+    }
+
+    animateParticles() {
+        const context = this.canvasContext;
+
+        context.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height);
+
+        let activeParticles = false;
+
+        this.particles.forEach((particle) => {
+            if (particle.life <= 0) {
+                return;
+            }
+
+            activeParticles = true;
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += particle.gravity;
+            particle.life -= particle.decay;
+
+            if (particle.y + particle.radius > window.innerHeight) {
+                particle.y = window.innerHeight - particle.radius;
+                particle.vy = -particle.vy * particle.bounce;
+            }
+
+            if (particle.x + particle.radius > window.innerWidth || particle.x - particle.radius < 0) {
+                particle.vx = -particle.vx * particle.bounce;
+            }
+
+            context.globalAlpha = Math.max(0, particle.life);
+            context.shadowBlur = particle.color === '#ccff00' ? 12 : 0;
+            context.shadowColor = particle.color;
+            context.beginPath();
+            context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            context.fillStyle = particle.color;
+            context.fill();
+        });
+
+        context.globalAlpha = 1;
+        context.shadowBlur = 0;
+
+        if (activeParticles) {
+            this.particleFrame = window.requestAnimationFrame(() => this.animateParticles());
+            return;
+        }
+
+        context.clearRect(0, 0, this.canvasTarget.width, this.canvasTarget.height);
+        this.particles = [];
+        this.particleFrame = null;
     }
 }

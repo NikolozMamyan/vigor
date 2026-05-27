@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class VigorAppController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    #[Route('/app/{view}', name: 'vigor_app', requirements: ['view' => 'home|workout|library|profile'], defaults: ['view' => 'home'])]
+    #[Route('/app/{view}', name: 'vigor_app', requirements: ['view' => 'home|workout|library|stats|profile'], defaults: ['view' => 'home'])]
     public function __invoke(
         DashboardService $dashboardService,
         ExerciseCatalogService $exerciseCatalogService,
@@ -37,7 +37,7 @@ final class VigorAppController extends AbstractController
                 ['id' => 'home', 'label' => 'Accueil', 'icon' => 'layout-grid'],
                 ['id' => 'workout', 'label' => 'Seance', 'icon' => 'play'],
                 ['id' => 'library', 'label' => 'Bibliotheque', 'icon' => 'search'],
-                ['id' => 'profile', 'label' => 'Profil', 'icon' => 'user'],
+                ['id' => 'stats', 'label' => 'Stats', 'icon' => 'bar-chart-2'],
             ],
             'profileView' => $profileView,
             'profileStats' => $profileView['stats'],

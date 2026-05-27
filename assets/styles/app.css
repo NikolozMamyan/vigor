@@ -79,6 +79,10 @@ body {
     bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + var(--app-viewport-bottom) + 0.85rem));
 }
 
+.workout-builder-open > .app-bottom-nav:not(.builder-bottom-nav) {
+    display: none;
+}
+
 .app-rest-timer {
     bottom: max(7rem, calc(env(safe-area-inset-bottom) + 6.5rem));
 }
@@ -98,6 +102,74 @@ body {
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-heavy {
+    background: rgba(10, 10, 12, 0.92);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+.rest-timer-surface {
+    transition:
+        width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        border-radius 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.rest-timer-island.is-triggered .rest-timer-surface {
+    animation: timerIslandShake 0.7s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+.rest-timer-island.is-triggered .rest-timer-surface {
+    border-color: var(--app-accent);
+    box-shadow: 0 0 50px rgba(204, 255, 0, 0.5);
+}
+
+.neo-input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    text-align: center;
+    outline: none;
+}
+
+.neo-input::placeholder {
+    color: rgba(255, 255, 255, 0.22);
+}
+
+.builder-tab-content {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.24s ease, transform 0.24s ease;
+}
+
+.builder-tab-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.btn-press {
+    transition: transform 0.15s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-press:active {
+    transform: scale(0.96);
+}
+
+.builder-exercise-card {
+    min-height: 10rem;
+}
+
+.home-stats-card {
+    min-height: 13.75rem;
 }
 
 .ambient-bg {
@@ -456,4 +528,18 @@ input[type="number"]::-webkit-outer-spin-button {
 @keyframes skeletonShimmer {
     from { background-position: 120% 0; }
     to { background-position: -120% 0; }
+}
+
+@keyframes timerIslandShake {
+    0%,
+    100% { transform: translate3d(0, 0, 0); }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% { transform: translate3d(-8px, 0, 0) rotate(-1.5deg); }
+    20%,
+    40%,
+    60%,
+    80% { transform: translate3d(8px, 0, 0) rotate(1.5deg); }
 }

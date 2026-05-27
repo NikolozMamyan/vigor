@@ -26,7 +26,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
+                this.navigateWithRefresh('workout', ['workout', 'home', 'stats']);
                 return;
             }
         } catch {
@@ -54,7 +54,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                this.navigateWithRefresh('workout', ['workout', 'home', 'profile']);
+                this.navigateWithRefresh('workout', ['workout', 'home', 'stats']);
                 return;
             }
         } catch {

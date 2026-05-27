@@ -279,7 +279,7 @@ export default class extends Controller {
             });
 
             if (response.ok) {
-                this.navigateWithRefresh('home', ['home', 'workout', 'profile']);
+                this.navigateWithRefresh('home', ['home', 'workout', 'stats']);
                 return;
             }
         } catch {
