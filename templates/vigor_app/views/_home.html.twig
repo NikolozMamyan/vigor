@@ -139,6 +139,18 @@
                         <span class="text-[10px] text-app-muted ml-auto">{{ record.previous }}</span>
                     </div>
                 </article>
+            {% else %}
+                <article class="glass-panel rounded-2xl p-4 w-full">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                            <i data-lucide="trophy" class="w-4 h-4 text-app-muted"></i>
+                        </span>
+                        <span>
+                            <span class="block text-sm font-extrabold text-white">Aucun record recent</span>
+                            <span class="block text-xs text-app-muted">Termine une seance pour alimenter tes records.</span>
+                        </span>
+                    </div>
+                </article>
             {% endfor %}
         </div>
     </div>

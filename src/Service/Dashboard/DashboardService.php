@@ -188,7 +188,7 @@ final class DashboardService
             ];
         }
 
-        return $records ?: $this->fallback()['recentRecords'];
+        return $records;
     }
 
     private function calculateStreakDays(UserProfile $profile, \DateTimeImmutable $now): int
@@ -264,34 +264,31 @@ final class DashboardService
     private function fallback(): array
     {
         return [
-            'dateLabel' => 'Mardi 26 Mai',
-            'activity' => ['kcal' => 850, 'minutes' => 45, 'targetMinutes' => 60],
+            'dateLabel' => $this->formatDateLabel(new \DateTimeImmutable()),
+            'activity' => ['kcal' => 0, 'minutes' => 0, 'targetMinutes' => 60],
             'weekly' => [
                 'days' => [
-                    ['day' => 'L', 'value' => '2.8', 'label' => 'Lundi', 'height' => 55, 'rest' => false],
-                    ['day' => 'M', 'value' => '3.6', 'label' => 'Mardi', 'height' => 78, 'rest' => false],
-                    ['day' => 'M', 'value' => '0', 'label' => 'Mercredi', 'height' => 0, 'rest' => true],
-                    ['day' => 'J', 'value' => '4.2', 'label' => 'Jeudi - meilleure seance', 'height' => 100, 'rest' => false, 'active' => true],
-                    ['day' => 'V', 'value' => '2.1', 'label' => 'Vendredi', 'height' => 40, 'rest' => false],
-                    ['day' => 'S', 'value' => '0', 'label' => 'Samedi', 'height' => 0, 'rest' => true],
-                    ['day' => 'D', 'value' => '1.5', 'label' => 'Dimanche', 'height' => 30, 'rest' => false],
+                    ['day' => 'L', 'value' => '0', 'label' => 'Lundi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'M', 'value' => '0', 'label' => 'Mardi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'M', 'value' => '0', 'label' => 'Mercredi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'J', 'value' => '0', 'label' => 'Jeudi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'V', 'value' => '0', 'label' => 'Vendredi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'S', 'value' => '0', 'label' => 'Samedi', 'height' => 0, 'rest' => true, 'active' => false],
+                    ['day' => 'D', 'value' => '0', 'label' => 'Dimanche', 'height' => 0, 'rest' => true, 'active' => false],
                 ],
-                'selectedValue' => '4.2',
-                'selectedLabel' => 'Jeudi - meilleure seance',
-                'totalTons' => '14.2',
-                'trendPercent' => 12,
+                'selectedValue' => '0',
+                'selectedLabel' => 'Aucune serie cochee cette semaine',
+                'totalTons' => '0',
+                'trendPercent' => 0,
             ],
-            'recentRecords' => [
-                ['exercise' => 'Squat', 'value' => '140', 'unit' => 'kg x 5', 'date' => 'Aujourd\'hui', 'gain' => '+5kg', 'previous' => 'vs 135kg', 'new' => true],
-                ['exercise' => 'Developpe couche', 'value' => '95', 'unit' => 'kg x 6', 'date' => 'Il y a 3j', 'gain' => '+2.5kg', 'previous' => 'vs 92.5kg'],
-            ],
+            'recentRecords' => [],
             'weeklyGoal' => [
-                'workouts' => ['current' => 3, 'target' => 4, 'percent' => 75],
-                'volume' => ['current' => 14200, 'target' => 14000, 'percent' => 100, 'trendPercent' => 12],
-                'trainingMinutes' => ['current' => 135, 'target' => 180, 'percent' => 75],
+                'workouts' => ['current' => 0, 'target' => 4, 'percent' => 0],
+                'volume' => ['current' => 0, 'target' => 14000, 'percent' => 0, 'trendPercent' => 0],
+                'trainingMinutes' => ['current' => 0, 'target' => 180, 'percent' => 0],
             ],
-            'stats' => ['weeklyVolumeTons' => '14.2', 'streakDays' => 4],
-            'cta' => ['active' => true, 'label' => 'En cours', 'title' => 'Hypertrophie Push', 'meta' => '45 Min - 6 Exos'],
+            'stats' => ['weeklyVolumeTons' => '0', 'streakDays' => 0],
+            'cta' => ['active' => false, 'label' => 'Aucune seance en cours', 'title' => 'Pret a demarrer', 'meta' => 'Choisir une seance libre ou un programme'],
         ];
     }
 }

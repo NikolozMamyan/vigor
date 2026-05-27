@@ -23,30 +23,34 @@ final class StatsAnalyticsService
      */
     public function build(string $period = 'week', ?\DateTimeImmutable $now = null): array
     {
-        $now ??= new \DateTimeImmutable();
-        $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
+        try {
+            $now ??= new \DateTimeImmutable();
+            $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
 
-        if (!$profile) {
-            return $this->fallback();
+            if (!$profile) {
+                return $this->fallback($period);
+            }
+
+            [$from, $to] = $this->periodRange($period, $now);
+            $sets = $this->setRepository->findCompletedForProfileBetween($profile, $from, $to);
+            $previousSets = $this->setRepository->findCompletedForProfileBetween($profile, $this->previousRangeStart($from, $to), $from);
+            $totalVolume = $this->sumVolume($sets);
+            $previousVolume = $this->sumVolume($previousSets);
+
+            return [
+                'period' => $period,
+                'totalVolumeKg' => (int) round($totalVolume),
+                'totalVolumeTons' => $this->formatTons($totalVolume),
+                'trendPercent' => $previousVolume > 0 ? (int) round((($totalVolume - $previousVolume) / $previousVolume) * 100) : 0,
+                'volumeBars' => $this->buildVolumeBars($sets, $period, $from, $to),
+                'muscleGroups' => $this->buildMuscleGroups($sets, $previousSets),
+                'progression' => $this->buildProgression($profile),
+                'sessions' => $this->buildSessionBubbles($sets),
+                'funFact' => $this->buildFunFact($totalVolume),
+            ];
+        } catch (\Throwable) {
+            return $this->fallback($period);
         }
-
-        [$from, $to] = $this->periodRange($period, $now);
-        $sets = $this->setRepository->findCompletedForProfileBetween($profile, $from, $to);
-        $previousSets = $this->setRepository->findCompletedForProfileBetween($profile, $this->previousRangeStart($from, $to), $from);
-        $totalVolume = $this->sumVolume($sets);
-        $previousVolume = $this->sumVolume($previousSets);
-
-        return [
-            'period' => $period,
-            'totalVolumeKg' => (int) round($totalVolume),
-            'totalVolumeTons' => $this->formatTons($totalVolume),
-            'trendPercent' => $previousVolume > 0 ? (int) round((($totalVolume - $previousVolume) / $previousVolume) * 100) : 0,
-            'volumeBars' => $this->buildVolumeBars($sets, $period, $from, $to),
-            'muscleGroups' => $this->buildMuscleGroups($sets, $previousSets),
-            'progression' => $this->buildProgression($profile),
-            'sessions' => $this->buildSessionBubbles($sets),
-            'funFact' => $this->buildFunFact($totalVolume),
-        ];
     }
 
     /**
@@ -289,10 +293,10 @@ final class StatsAnalyticsService
     /**
      * @return array<string, mixed>
      */
-    private function fallback(): array
+    private function fallback(string $period = 'week'): array
     {
         return [
-            'period' => 'week',
+            'period' => \in_array($period, ['week', 'month', 'quarter'], true) ? $period : 'week',
             'totalVolumeKg' => 0,
             'totalVolumeTons' => '0',
             'trendPercent' => 0,

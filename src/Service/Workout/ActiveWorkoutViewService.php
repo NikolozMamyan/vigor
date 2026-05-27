@@ -31,7 +31,7 @@ final class ActiveWorkoutViewService
             $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
 
             if (!$profile) {
-                return $this->fallback();
+                return $this->emptyState();
             }
 
             $session = $this->sessionRepository->findActiveForProfile($profile);
@@ -44,7 +44,7 @@ final class ActiveWorkoutViewService
             $currentSessionExercise = $this->resolveCurrentSessionExercise($sessionExercises, $preferredSessionExerciseId);
 
             if (!$currentSessionExercise) {
-                return $this->fallback();
+                return $this->noActiveWorkout($profile);
             }
 
             $exercise = $currentSessionExercise->getExercise();
@@ -75,7 +75,7 @@ final class ActiveWorkoutViewService
                 'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3, $currentSessionExercise->getId()),
             ];
         } catch (\Throwable) {
-            return $this->fallback();
+            return $this->emptyState();
         }
     }
 
@@ -239,31 +239,25 @@ final class ActiveWorkoutViewService
     /**
      * @return array<string, mixed>
      */
-    private function fallback(): array
+    private function emptyState(): array
     {
         return [
-            'hasActiveSession' => true,
+            'hasActiveSession' => false,
             'sessionId' => null,
             'sessionExerciseId' => null,
             'sessionName' => 'Seance libre',
-            'statusLabel' => 'En cours',
-            'headerTitle' => 'Seance libre',
-            'headerSubtitle' => 'Developpe Couche - Pectoraux',
-            'exercisePosition' => 1,
-            'exerciseCount' => 1,
-            'exerciseList' => [
-                ['id' => null, 'name' => 'Developpe Couche', 'muscleGroup' => 'Pectoraux', 'image' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop', 'active' => true],
-            ],
-            'equipment' => 'Barre Olympique',
-            'title' => 'Developpe Couche',
-            'titleLines' => ['Developpe', 'Couche'],
-            'image' => 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop',
+            'statusLabel' => 'Aucune seance',
+            'headerTitle' => 'Aucune seance active',
+            'headerSubtitle' => 'Demarre une seance libre ou un programme.',
+            'exercisePosition' => 0,
+            'exerciseCount' => 0,
+            'exerciseList' => [],
+            'equipment' => '',
+            'title' => 'Aucune seance active',
+            'titleLines' => ['Aucune seance', 'active'],
+            'image' => 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
             'targetLabel' => '3 x 8-10',
-            'sets' => [
-                ['id' => null, 'sessionExerciseId' => null, 'number' => 1, 'previous' => '80kg x 10', 'weight' => 80, 'reps' => 10, 'completed' => false],
-                ['id' => null, 'sessionExerciseId' => null, 'number' => 2, 'previous' => '80kg x 8', 'weight' => null, 'reps' => null, 'completed' => false],
-                ['id' => null, 'sessionExerciseId' => null, 'number' => 3, 'previous' => '77.5kg x 9', 'weight' => null, 'reps' => null, 'completed' => false],
-            ],
+            'sets' => [],
             'programs' => [],
         ];
     }

@@ -115,11 +115,11 @@ final class ProfileStatsService
     {
         return [
             'profile' => [
-                'displayName' => 'Alex',
-                'username' => 'alexvigor',
-                'avatarUrl' => 'https://placehold.co/200x200/18181b/ccff00?text=AX',
-                'joinedLabel' => 'Jan 2025',
-                'levelLabel' => 'Niveau 1 - Avance',
+                'displayName' => 'Profil indisponible',
+                'username' => '',
+                'avatarUrl' => 'https://placehold.co/200x200/18181b/ccff00?text=--',
+                'joinedLabel' => '',
+                'levelLabel' => 'Aucune donnee',
             ],
             'stats' => [
                 ['label' => 'Seances', 'value' => '0', 'icon' => 'calendar-check'],

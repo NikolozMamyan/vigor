@@ -27,10 +27,6 @@ final class ExerciseCatalogService
             $profile = $this->profileRepository->findOneBy(['username' => 'alexvigor']);
             $exercises = $this->exerciseRepository->findCatalogForProfile($profile);
 
-            if ([] === $exercises) {
-                return $this->fallback();
-            }
-
             return [
                 'categories' => $this->buildCategories($exercises),
                 'exercises' => array_map(fn (Exercise $exercise): array => $this->normalizeExercise($exercise), $exercises),
@@ -55,15 +51,7 @@ final class ExerciseCatalogService
 
             return array_map(fn (Exercise $exercise): array => $this->normalizeExercise($exercise), $exercises);
         } catch (\Throwable) {
-            $fallback = $this->fallback()['exercises'];
-
-            if ('' === $query) {
-                return $fallback;
-            }
-
-            $normalizedQuery = mb_strtolower($query);
-
-            return array_values(array_filter($fallback, static fn (array $exercise): bool => str_contains(mb_strtolower($exercise['name'].' '.$exercise['category'].' '.$exercise['tag']), $normalizedQuery)));
+            return [];
         }
     }
 
@@ -182,15 +170,8 @@ final class ExerciseCatalogService
         return [
             'categories' => [
                 ['label' => 'Populaires', 'icon' => 'flame', 'active' => true],
-                ['label' => 'Pecs', 'icon' => 'target', 'active' => false],
-                ['label' => 'Dos', 'icon' => 'shield', 'active' => false],
-                ['label' => 'Bras', 'icon' => 'dumbbell', 'active' => false],
             ],
-            'exercises' => [
-                ['id' => 1, 'name' => 'Squat', 'category' => 'Jambes', 'tag' => 'Barre', 'image' => 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
-                ['id' => 2, 'name' => 'Curl Biceps', 'category' => 'Bras', 'tag' => 'Halteres', 'image' => 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop', 'source' => Exercise::SOURCE_VIGOR, 'isCustom' => false],
-                ['id' => 3, 'name' => 'Tirage elastique maison', 'category' => 'Dos', 'tag' => 'Elastique', 'image' => 'https://placehold.co/600x400/18181b/ccff00?text=VIGOR', 'source' => Exercise::SOURCE_CUSTOM, 'isCustom' => true],
-            ],
+            'exercises' => [],
         ];
     }
 }

@@ -50,6 +50,14 @@
                     <p class="text-[10px] text-app-muted uppercase font-semibold">{{ exercise.category }}</p>
                 </div>
             </article>
+        {% else %}
+            <div class="col-span-2 glass-panel rounded-2xl p-5 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="search" class="w-5 h-5 text-app-muted"></i>
+                </div>
+                <p class="text-sm font-bold text-white mb-1">Aucun mouvement disponible</p>
+                <p class="text-xs text-app-muted">Ajoute un mouvement custom ou recharge la bibliotheque.</p>
+            </div>
         {% endfor %}
     </div>
 
