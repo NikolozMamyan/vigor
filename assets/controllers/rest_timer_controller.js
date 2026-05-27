@@ -218,8 +218,8 @@ export default class extends Controller {
             tag: 'vigor-rest-timer',
             renotify: true,
             silent: false,
-            icon: '/icons/vigor-icon-192.png',
-            badge: '/icons/vigor-icon-192.png',
+            icon: '/icons/vigor-notification-192.png',
+            badge: '/icons/vigor-notification-96.png',
             data: { url: notification.url },
         };
 

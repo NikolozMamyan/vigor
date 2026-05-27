@@ -1,8 +1,11 @@
-const CACHE_NAME = 'vigor-v4';
+const CACHE_NAME = 'vigor-v5';
 const APP_SHELL_URLS = [
     '/app',
     '/manifest.webmanifest',
     '/icons/vigor-icon.svg',
+    '/icons/vigor-notification.svg',
+    '/icons/vigor-notification-96.png',
+    '/icons/vigor-notification-192.png',
     '/icons/vigor-icon-192.png',
     '/icons/vigor-icon-512.png',
 ];

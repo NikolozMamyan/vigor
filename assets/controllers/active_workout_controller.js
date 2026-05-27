@@ -180,6 +180,11 @@ export default class extends Controller {
                 this.applySessionExercise(await response.json());
                 return;
             }
+
+            if (this.isStaleWorkoutResponse(response)) {
+                this.recoverStaleWorkoutState();
+                return;
+            }
         } catch {
         } finally {
             button.disabled = false;
@@ -211,6 +216,10 @@ export default class extends Controller {
             });
 
             if (!response.ok) {
+                if (this.isStaleWorkoutResponse(response)) {
+                    this.recoverStaleWorkoutState();
+                }
+
                 return;
             }
 
@@ -333,6 +342,7 @@ export default class extends Controller {
 
     async updateSession(button, action) {
         if (!this.hasSessionIdValue || this.sessionIdValue <= 0) {
+            this.recoverStaleWorkoutState();
             return;
         }
 
@@ -349,11 +359,28 @@ export default class extends Controller {
                 this.navigateWithRefresh('home', ['home', 'workout', 'stats']);
                 return;
             }
+
+            if (this.isStaleWorkoutResponse(response)) {
+                this.recoverStaleWorkoutState();
+                return;
+            }
         } catch {
         }
 
         button.disabled = false;
         button.classList.remove('opacity-60');
+    }
+
+    isStaleWorkoutResponse(response) {
+        return [404, 410, 422].includes(response.status);
+    }
+
+    recoverStaleWorkoutState() {
+        this.sessionIdValue = 0;
+        this.sessionExerciseIdValue = 0;
+        this.element.dataset.activeWorkoutSessionIdValue = '0';
+        this.element.dataset.activeWorkoutSessionExerciseIdValue = '0';
+        this.navigateWithRefresh('workout', ['workout', 'home', 'stats']);
     }
 
     navigateWithRefresh(nextView, views) {
