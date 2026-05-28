@@ -18,6 +18,8 @@ export default class extends Controller {
 
     disconnect() {
         this.detachBuilderViewportListeners();
+        this.resetBuilderViewport();
+        document.body.classList.remove('overflow-hidden');
         this.toggleBuilderShell(false);
     }
 

@@ -3,6 +3,10 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = ['modal', 'startButton', 'programButton'];
 
+    disconnect() {
+        document.body.classList.remove('overflow-hidden');
+    }
+
     open() {
         this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
         this.modalTarget.classList.add('opacity-100');

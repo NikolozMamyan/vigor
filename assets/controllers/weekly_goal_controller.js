@@ -3,6 +3,16 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = ['modal', 'form', 'workouts', 'volume', 'minutes', 'error', 'submit'];
 
+    connect() {
+        this.boundKeepFocusedFieldVisible = this.keepFocusedFieldVisible.bind(this);
+        this.modalTarget.addEventListener('focusin', this.boundKeepFocusedFieldVisible);
+    }
+
+    disconnect() {
+        this.modalTarget?.removeEventListener('focusin', this.boundKeepFocusedFieldVisible);
+        document.body.classList.remove('overflow-hidden');
+    }
+
     open() {
         this.errorTarget.textContent = '';
         this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
@@ -16,6 +26,20 @@ export default class extends Controller {
         this.modalTarget.classList.remove('opacity-100');
         this.modalTarget.querySelector('.weekly-goal-modal-panel')?.classList.add('translate-y-full', 'scale-95');
         document.body.classList.remove('overflow-hidden');
+    }
+
+    keepFocusedFieldVisible(event) {
+        if (!event.target.matches('input, textarea, select')) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            event.target.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior: 'smooth',
+            });
+        }, 120);
     }
 
     async save(event) {

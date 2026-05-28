@@ -12,6 +12,10 @@ export default class extends Controller {
         this.renderExerciseOptions();
     }
 
+    disconnect() {
+        document.body.classList.remove('overflow-hidden');
+    }
+
     addSet() {
         const nextPosition = this.nextPosition();
         this.setsTarget.insertAdjacentHTML('beforeend', this.template(nextPosition));

@@ -11,6 +11,7 @@ export default class extends Controller {
     disconnect() {
         window.clearTimeout(this.timeout);
         this.abortController?.abort();
+        document.body.classList.remove('overflow-hidden');
     }
 
     search() {

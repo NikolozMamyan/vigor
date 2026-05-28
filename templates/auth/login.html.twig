@@ -29,6 +29,7 @@
             background: rgba(5, 5, 5, 0.8);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
+            height: var(--auth-viewport-height, 100dvh);
         }
 
         .auth-slider {
@@ -43,6 +44,7 @@
             width: 50%;
             flex-shrink: 0;
             padding: 0 1.5rem;
+            padding-bottom: max(2rem, calc(env(safe-area-inset-bottom) + var(--app-viewport-bottom) + 1.5rem));
         }
 
         .auth-floating {
@@ -123,7 +125,7 @@
         <div class="blob bg-cyan-700 top-1/2 left-1/2 -translate-x-1/2" style="animation-delay: -2s;"></div>
     </div>
 
-    <main class="auth-shell w-full max-w-md h-[100dvh] sm:h-[85vh] sm:rounded-[2.5rem] relative flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.8)] border-x sm:border border-white/10 z-10 overflow-hidden">
+    <main class="auth-shell w-full max-w-md sm:h-[85vh] sm:rounded-[2.5rem] relative flex flex-col shadow-[0_0_80px_rgba(0,0,0,0.8)] border-x sm:border border-white/10 z-10 overflow-hidden">
         <header class="pt-12 pb-6 px-6 flex items-center justify-center relative z-20">
             <div class="flex flex-col items-center gap-2">
                 <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center shadow-[0_0_15px_rgba(204,255,0,0.15)]">
@@ -133,7 +135,7 @@
             </div>
         </header>
 
-        <div class="flex-1 relative overflow-hidden flex flex-col justify-center">
+        <div class="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden flex flex-col justify-center">
             <div id="auth-slider" class="auth-slider">
                 <div id="login-pane" class="auth-pane {{ mode == 'register' ? '' : 'active' }}">
                     <div class="mb-8 text-center auth-stagger auth-delay-1">
@@ -254,6 +256,20 @@
             const loginPane = document.getElementById('login-pane');
             const registerPane = document.getElementById('register-pane');
             const progressBar = document.getElementById('auth-progress-bar');
+            const shell = document.querySelector('.auth-shell');
+
+            const syncViewport = () => {
+                const viewport = window.visualViewport;
+                const height = viewport?.height || window.innerHeight;
+                const offsetTop = viewport?.offsetTop || 0;
+                const bottomInset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+
+                document.documentElement.style.setProperty('--app-viewport-bottom', `${Math.round(bottomInset)}px`);
+                shell?.style.setProperty('--auth-viewport-height', `${Math.round(height)}px`);
+                if (shell) {
+                    shell.style.transform = offsetTop ? `translateY(${Math.round(offsetTop)}px)` : '';
+                }
+            };
 
             const switchMode = (mode) => {
                 if (navigator.vibrate) {
@@ -284,6 +300,19 @@
                     }
                 });
             });
+
+            document.querySelectorAll('input').forEach((input) => {
+                input.addEventListener('focus', () => {
+                    window.setTimeout(() => {
+                        input.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+                    }, 120);
+                });
+            });
+
+            syncViewport();
+            window.addEventListener('resize', syncViewport);
+            window.visualViewport?.addEventListener('resize', syncViewport);
+            window.visualViewport?.addEventListener('scroll', syncViewport);
 
             if (window.lucide) {
                 window.lucide.createIcons();
