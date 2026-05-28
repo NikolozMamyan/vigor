@@ -218,6 +218,10 @@ body {
     transform: translateY(0) scale(1);
 }
 
+#view-records.tab-content.active {
+    transform: none;
+}
+
 .app-navigation-skeleton {
     position: absolute;
     inset: 0;
@@ -519,6 +523,15 @@ input[type="number"]::-webkit-outer-spin-button {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(204, 255, 0, 0.3);
     box-shadow: 0 10px 30px -10px rgba(204, 255, 0, 0.15);
+}
+
+@media (hover: none) {
+    .clickable-pr-card:hover {
+        transform: none;
+        background: inherit;
+        border-color: rgba(255, 255, 255, 0.08);
+        box-shadow: inherit;
+    }
 }
 
 .records-filter {

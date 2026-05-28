@@ -22,6 +22,8 @@ export default class extends Controller {
     filter(event) {
         const category = event.params.category || 'all';
 
+        this.close(false);
+
         this.filterTargets.forEach((button) => {
             const active = button.dataset.recordsCategoryParam === category;
             button.classList.toggle('is-active', active);
@@ -35,6 +37,8 @@ export default class extends Controller {
             const visible = category === 'all' || card.dataset.category === category;
             card.classList.toggle('hidden', !visible);
         });
+
+        this.element.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     open(event) {
@@ -63,8 +67,8 @@ export default class extends Controller {
         }
     }
 
-    close() {
-        if (navigator.vibrate) {
+    close(vibrate = true) {
+        if (vibrate && navigator.vibrate) {
             navigator.vibrate(20);
         }
 
