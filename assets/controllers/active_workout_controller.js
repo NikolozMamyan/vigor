@@ -100,8 +100,7 @@ export default class extends Controller {
                 }
 
                 return `${exercise.name} ${exercise.category} ${exercise.tag}`.toLowerCase().includes(query);
-            })
-            .slice(0, 30);
+            });
 
         this.exerciseOptionsTarget.innerHTML = exercises.map((exercise) => this.exerciseOption(exercise)).join('');
 

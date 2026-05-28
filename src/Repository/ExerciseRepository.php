@@ -17,14 +17,17 @@ final class ExerciseRepository extends ServiceEntityRepository
     /**
      * @return list<Exercise>
      */
-    public function searchForProfile(string $query, ?UserProfile $profile = null, int $limit = 20): array
+    public function searchForProfile(string $query, ?UserProfile $profile = null, ?int $limit = null): array
     {
         $qb = $this->createQueryBuilder('exercise')
             ->andWhere('LOWER(exercise.name) LIKE :query OR LOWER(exercise.muscleGroup) LIKE :query OR LOWER(exercise.equipment) LIKE :query')
             ->setParameter('query', '%'.mb_strtolower($query).'%')
-            ->setMaxResults($limit)
             ->orderBy('exercise.source', 'DESC')
             ->addOrderBy('exercise.name', 'ASC');
+
+        if (null !== $limit) {
+            $qb->setMaxResults($limit);
+        }
 
         if ($profile) {
             $qb
@@ -43,12 +46,15 @@ final class ExerciseRepository extends ServiceEntityRepository
     /**
      * @return list<Exercise>
      */
-    public function findCatalogForProfile(?UserProfile $profile = null, int $limit = 50): array
+    public function findCatalogForProfile(?UserProfile $profile = null, ?int $limit = null): array
     {
         $qb = $this->createQueryBuilder('exercise')
-            ->setMaxResults($limit)
             ->orderBy('exercise.source', 'DESC')
             ->addOrderBy('exercise.name', 'ASC');
+
+        if (null !== $limit) {
+            $qb->setMaxResults($limit);
+        }
 
         if ($profile) {
             $qb
