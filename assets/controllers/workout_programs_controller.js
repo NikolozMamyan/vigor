@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['modal', 'name', 'search', 'exerciseOptions', 'selectedList', 'emptySelection', 'counter', 'list'];
+    static targets = ['modal', 'builderPanel', 'builderBody', 'name', 'search', 'exerciseOptions', 'selectedList', 'emptySelection', 'counter', 'list'];
     static values = {
         exercises: Array,
     };
@@ -9,12 +9,15 @@ export default class extends Controller {
     connect() {
         this.selectedExercises = new Map();
         this.currentTab = 'library';
+        this.boundSyncBuilderViewport = this.syncBuilderViewport.bind(this);
+        this.boundKeepFocusedFieldVisible = this.keepFocusedFieldVisible.bind(this);
         this.renderExerciseOptions();
         this.renderSelectedExercises();
         this.updateBuilderControls();
     }
 
     disconnect() {
+        this.detachBuilderViewportListeners();
         this.toggleBuilderShell(false);
     }
 
@@ -23,6 +26,8 @@ export default class extends Controller {
         this.modalTarget.classList.add('opacity-100');
         document.body.classList.add('overflow-hidden');
         this.toggleBuilderShell(true);
+        this.attachBuilderViewportListeners();
+        this.syncBuilderViewport();
         window.setTimeout(() => this.nameTarget?.focus(), 80);
         this.switchBuilderTab('library');
         this.renderExerciseOptions();
@@ -32,11 +37,83 @@ export default class extends Controller {
         this.modalTarget.classList.add('opacity-0', 'pointer-events-none');
         this.modalTarget.classList.remove('opacity-100');
         document.body.classList.remove('overflow-hidden');
+        this.detachBuilderViewportListeners();
+        this.resetBuilderViewport();
         this.toggleBuilderShell(false);
     }
 
     toggleBuilderShell(open) {
         this.element.closest('.app-container')?.classList.toggle('workout-builder-open', open);
+    }
+
+    attachBuilderViewportListeners() {
+        if (this.builderViewportAttached) {
+            return;
+        }
+
+        this.builderViewportAttached = true;
+        window.addEventListener('resize', this.boundSyncBuilderViewport);
+        this.modalTarget.addEventListener('focusin', this.boundKeepFocusedFieldVisible);
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.boundSyncBuilderViewport);
+            window.visualViewport.addEventListener('scroll', this.boundSyncBuilderViewport);
+        }
+    }
+
+    detachBuilderViewportListeners() {
+        if (!this.builderViewportAttached) {
+            return;
+        }
+
+        this.builderViewportAttached = false;
+        window.removeEventListener('resize', this.boundSyncBuilderViewport);
+        this.modalTarget?.removeEventListener('focusin', this.boundKeepFocusedFieldVisible);
+
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', this.boundSyncBuilderViewport);
+            window.visualViewport.removeEventListener('scroll', this.boundSyncBuilderViewport);
+        }
+    }
+
+    syncBuilderViewport() {
+        if (!this.hasBuilderPanelTarget) {
+            return;
+        }
+
+        const viewport = window.visualViewport;
+        const height = viewport?.height || window.innerHeight;
+        const offsetTop = viewport?.offsetTop || 0;
+        const bottomInset = viewport
+            ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+            : 0;
+
+        document.documentElement.style.setProperty('--app-viewport-bottom', `${Math.round(bottomInset)}px`);
+        this.builderPanelTarget.style.setProperty('--builder-viewport-height', `${Math.round(height)}px`);
+        this.builderPanelTarget.style.transform = offsetTop ? `translateY(${Math.round(offsetTop)}px)` : '';
+    }
+
+    resetBuilderViewport() {
+        if (!this.hasBuilderPanelTarget) {
+            return;
+        }
+
+        this.builderPanelTarget.style.removeProperty('--builder-viewport-height');
+        this.builderPanelTarget.style.transform = '';
+    }
+
+    keepFocusedFieldVisible(event) {
+        if (!event.target.matches('input, textarea, select')) {
+            return;
+        }
+
+        window.setTimeout(() => {
+            event.target.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior: 'smooth',
+            });
+        }, 120);
     }
 
     async create(event) {

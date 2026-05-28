@@ -394,6 +394,12 @@ input[type="number"] {
     font-variant-numeric: tabular-nums;
 }
 
+input,
+textarea,
+select {
+    scroll-margin-block: max(6rem, calc(var(--app-viewport-bottom) + 5rem));
+}
+
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
