@@ -16,8 +16,11 @@ final class ExerciseAdminController extends AbstractController
     #[Route('', name: 'admin_exercises_index', methods: ['GET'])]
     public function index(ExerciseRepository $exerciseRepository): Response
     {
+        $exercises = $exerciseRepository->findBy([], ['name' => 'ASC']);
+
         return $this->render('admin/exercises/index.html.twig', [
-            'exercises' => $exerciseRepository->findBy([], ['name' => 'ASC']),
+            'exercises' => $exercises,
+            'adminStats' => $this->buildStats($exercises),
             'exercise' => new Exercise(),
             'mode' => 'create',
             'error' => null,
@@ -39,8 +42,11 @@ final class ExerciseAdminController extends AbstractController
 
             return $this->redirectToRoute('admin_exercises_index');
         } catch (\InvalidArgumentException $exception) {
+            $exercises = $exerciseRepository->findBy([], ['name' => 'ASC']);
+
             return $this->render('admin/exercises/index.html.twig', [
-                'exercises' => $exerciseRepository->findBy([], ['name' => 'ASC']),
+                'exercises' => $exercises,
+                'adminStats' => $this->buildStats($exercises),
                 'exercise' => $exercise,
                 'mode' => 'create',
                 'error' => $exception->getMessage(),
@@ -57,8 +63,11 @@ final class ExerciseAdminController extends AbstractController
             throw $this->createNotFoundException('Exercice introuvable.');
         }
 
+        $exercises = $exerciseRepository->findBy([], ['name' => 'ASC']);
+
         return $this->render('admin/exercises/index.html.twig', [
-            'exercises' => $exerciseRepository->findBy([], ['name' => 'ASC']),
+            'exercises' => $exercises,
+            'adminStats' => $this->buildStats($exercises),
             'exercise' => $exercise,
             'mode' => 'edit',
             'error' => null,
@@ -83,13 +92,48 @@ final class ExerciseAdminController extends AbstractController
 
             return $this->redirectToRoute('admin_exercises_edit', ['id' => $exercise->getId()]);
         } catch (\InvalidArgumentException $exception) {
+            $exercises = $exerciseRepository->findBy([], ['name' => 'ASC']);
+
             return $this->render('admin/exercises/index.html.twig', [
-                'exercises' => $exerciseRepository->findBy([], ['name' => 'ASC']),
+                'exercises' => $exercises,
+                'adminStats' => $this->buildStats($exercises),
                 'exercise' => $exercise,
                 'mode' => 'edit',
                 'error' => $exception->getMessage(),
                 'formData' => $request->request->all(),
             ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
+    }
+
+    /**
+     * @param list<Exercise> $exercises
+     *
+     * @return array{total: int, majorityEquipment: string, majorityPercent: int, latestName: string, latestLabel: string}
+     */
+    private function buildStats(array $exercises): array
+    {
+        $equipmentCounts = [];
+        $latest = null;
+
+        foreach ($exercises as $exercise) {
+            $equipment = $exercise->getEquipment();
+            $equipmentCounts[$equipment] = ($equipmentCounts[$equipment] ?? 0) + 1;
+
+            if (!$latest || $exercise->getCreatedAt() > $latest->getCreatedAt()) {
+                $latest = $exercise;
+            }
+        }
+
+        arsort($equipmentCounts);
+        $majorityEquipment = (string) array_key_first($equipmentCounts);
+        $total = \count($exercises);
+
+        return [
+            'total' => $total,
+            'majorityEquipment' => '' !== $majorityEquipment ? $majorityEquipment : 'Aucun',
+            'majorityPercent' => $total > 0 ? (int) round(((int) reset($equipmentCounts) / $total) * 100) : 0,
+            'latestName' => $latest?->getName() ?? 'Aucun ajout',
+            'latestLabel' => $latest ? $latest->getCreatedAt()->format('d/m/Y') : '-',
+        ];
     }
 }

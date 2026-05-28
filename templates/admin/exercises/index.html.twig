@@ -1,159 +1,494 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}VIGOR Admin - Exercices{% endblock %}
-{% block body_class %}bg-[#070707] text-white min-h-screen overflow-x-hidden{% endblock %}
+{% block body_class %}min-h-screen bg-[#030303] text-white overflow-x-hidden pb-12{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+{% endblock %}
 
 {% block body %}
     {% set formData = formData|default({}) %}
     {% set isEdit = mode == 'edit' %}
+    {% set fallbackImage = 'https://placehold.co/800x600/18181b/ccff00?text=VIGOR' %}
+    {% set exerciseRows = [] %}
+    {% set equipmentFilters = ['Tous'] %}
+    {% set muscleGroups = [] %}
+    {% set equipments = [] %}
 
-    <main class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(204,255,0,0.08),transparent_32%),linear-gradient(180deg,#0b0b0d_0%,#050505_100%)]">
-        <div class="mx-auto flex min-h-screen w-full max-w-7xl gap-6 px-6 py-6">
-            <aside class="hidden w-64 shrink-0 rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl lg:block">
+    {% for item in exercises %}
+        {% set image = item.imageUrl ?: fallbackImage %}
+        {% set exerciseRows = exerciseRows|merge([{
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            muscleGroup: item.muscleGroup,
+            equipment: item.equipment,
+            imageUrl: image,
+            source: item.source,
+            updateUrl: path('admin_exercises_update', {id: item.id}),
+            csrf: csrf_token('admin_exercise_' ~ item.id)
+        }]) %}
+        {% if item.equipment not in equipmentFilters %}
+            {% set equipmentFilters = equipmentFilters|merge([item.equipment]) %}
+        {% endif %}
+        {% if item.muscleGroup not in muscleGroups %}
+            {% set muscleGroups = muscleGroups|merge([item.muscleGroup]) %}
+        {% endif %}
+        {% if item.equipment not in equipments %}
+            {% set equipments = equipments|merge([item.equipment]) %}
+        {% endif %}
+    {% endfor %}
+
+    <style>
+        .admin-glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .admin-input {
+            width: 100%;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+            outline: none;
+            transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .admin-input:focus {
+            border-color: rgba(204, 255, 0, 0.45);
+            background: rgba(204, 255, 0, 0.025);
+            box-shadow: 0 0 20px rgba(204, 255, 0, 0.15);
+        }
+
+        .admin-card {
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(204, 255, 0, 0.3);
+            box-shadow: 0 15px 30px -10px rgba(204, 255, 0, 0.15);
+        }
+
+        .admin-blob {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 9999px;
+            mix-blend-mode: screen;
+            filter: blur(120px);
+            opacity: 0.08;
+            animation: adminBlobMove 18s infinite alternate ease-in-out;
+        }
+
+        @keyframes adminBlobMove {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(150px, 100px) scale(1.15); }
+            100% { transform: translate(-50px, 200px) scale(0.9); }
+        }
+    </style>
+
+    <main class="relative min-h-screen overflow-hidden">
+        <div class="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div class="admin-blob left-10 top-1/4 bg-lime-500"></div>
+            <div class="admin-blob bottom-1/4 right-20 bg-emerald-500" style="animation-delay: -5s;"></div>
+        </div>
+
+        <div class="relative z-10 mx-auto max-w-7xl px-6 pt-8">
+            <header class="flex flex-col items-start justify-between gap-4 border-b border-white/5 pb-8 sm:flex-row sm:items-center">
                 <div class="flex items-center gap-3">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-app-accent/20 bg-app-accent/10 text-app-accent">
-                        <i data-lucide="dumbbell" class="h-5 w-5"></i>
-                    </span>
-                    <span>
-                        <span class="block text-sm font-black tracking-[0.22em]">VIGOR</span>
-                        <span class="block text-[10px] font-bold uppercase tracking-widest text-app-muted">Admin desktop</span>
-                    </span>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-app-accent/20 bg-app-accent/10">
+                        <i data-lucide="sliders" class="h-6 w-6 text-app-accent"></i>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-black uppercase tracking-widest text-app-accent">Console de controle</span>
+                        <h1 class="text-3xl font-black tracking-tight text-white">Gestion de la Bibliotheque</h1>
+                    </div>
                 </div>
 
-                <nav class="mt-8 space-y-2">
-                    <a href="{{ path('admin_exercises_index') }}" class="flex items-center gap-3 rounded-2xl bg-app-accent px-4 py-3 text-sm font-black text-black">
-                        <i data-lucide="list-plus" class="h-4 w-4"></i>
-                        Exercices
-                    </a>
-                    <a href="{{ path('vigor_app', {view: 'home'}) }}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-app-muted hover:text-white">
-                        <i data-lucide="smartphone" class="h-4 w-4"></i>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ path('vigor_app', {view: 'home'}) }}" class="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 text-xs font-black uppercase tracking-wider text-app-muted transition hover:text-white">
                         Retour app
                     </a>
-                </nav>
-            </aside>
+                    <button type="button" class="rounded-2xl bg-app-accent px-6 py-3.5 text-sm font-black uppercase tracking-wider text-black shadow-lg transition hover:bg-lime-400 hover:shadow-lime-500/20 active:scale-[0.96]" data-action-create>
+                        <span class="inline-flex items-center gap-2"><i data-lucide="plus" class="h-4 w-4"></i> Ajouter un exercice</span>
+                    </button>
+                </div>
+            </header>
 
-            <section class="grid min-w-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-                <div class="min-w-0 space-y-5">
-                    <header class="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl">
-                        <div class="flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <p class="text-[10px] font-black uppercase tracking-widest text-app-accent">Catalogue exercices</p>
-                                <h1 class="mt-1 text-3xl font-black tracking-tight">Tous les mouvements</h1>
-                                <p class="mt-2 text-sm font-medium text-app-muted">{{ exercises|length }} exercice{{ exercises|length > 1 ? 's' : '' }} dans le catalogue.</p>
-                            </div>
-                            <a href="{{ path('admin_exercises_index') }}" class="inline-flex items-center gap-2 rounded-2xl bg-app-accent px-4 py-3 text-sm font-black text-black shadow-neon">
-                                <i data-lucide="plus" class="h-4 w-4"></i>
-                                Nouvel exercice
-                            </a>
-                        </div>
-                    </header>
+            <section class="grid grid-cols-1 gap-4 py-8 md:grid-cols-4">
+                <article class="admin-glass-panel relative overflow-hidden rounded-3xl p-5">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">Mouvements Totaux</p>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-black tabular-nums text-white" data-total-count>{{ adminStats.total }}</span>
+                        <span class="text-xs font-bold text-app-accent">Actifs</span>
+                    </div>
+                    <div class="absolute bottom-4 right-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-app-muted">
+                        <i data-lucide="database" class="h-5 w-5"></i>
+                    </div>
+                </article>
 
-                    {% for message in app.flashes('success') %}
-                        <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">{{ message }}</div>
+                <article class="admin-glass-panel relative overflow-hidden rounded-3xl p-5">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">Equipement majoritaire</p>
+                    <div class="flex items-baseline gap-2">
+                        <span class="max-w-[10rem] truncate text-2xl font-black text-white">{{ adminStats.majorityEquipment }}</span>
+                        <span class="text-xs font-bold text-app-muted">({{ adminStats.majorityPercent }}%)</span>
+                    </div>
+                    <div class="absolute bottom-4 right-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-app-muted">
+                        <i data-lucide="dumbbell" class="h-5 w-5"></i>
+                    </div>
+                </article>
+
+                <article class="admin-glass-panel relative overflow-hidden rounded-3xl p-5">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">Dernier Ajout</p>
+                    <div class="flex items-baseline gap-2">
+                        <span class="max-w-[150px] truncate text-sm font-black text-white">{{ adminStats.latestName }}</span>
+                        <span class="text-[9px] font-black text-emerald-400">{{ adminStats.latestLabel }}</span>
+                    </div>
+                    <div class="absolute bottom-4 right-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-app-muted">
+                        <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                    </div>
+                </article>
+
+                <article class="admin-glass-panel relative overflow-hidden rounded-3xl p-5">
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-app-muted">Status Serveur d'Assets</p>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500"></span>
+                        <span class="text-sm font-extrabold text-emerald-500">Operationnel</span>
+                    </div>
+                    <div class="absolute bottom-4 right-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-app-muted">
+                        <i data-lucide="cloud-lightning" class="h-5 w-5"></i>
+                    </div>
+                </article>
+            </section>
+
+            {% for message in app.flashes('success') %}
+                <div class="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">{{ message }}</div>
+            {% endfor %}
+
+            {% if error %}
+                <div class="mb-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-300">{{ error }}</div>
+            {% endif %}
+
+            <section class="flex flex-col items-center justify-between gap-4 pb-6 md:flex-row">
+                <div class="relative w-full md:max-w-md">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-muted"></i>
+                    <input type="search" data-admin-search placeholder="Rechercher par nom, categorie ou equipement..." class="w-full rounded-2xl border border-white/10 bg-white/[0.03] py-3.5 pl-11 pr-4 text-sm font-bold text-white outline-none transition-all focus:border-app-accent focus:bg-white/[0.05]">
+                </div>
+
+                <div class="flex w-full gap-2 overflow-x-auto pb-1 md:w-auto md:pb-0">
+                    {% for equipment in equipmentFilters|slice(0, 6) %}
+                        <button type="button" data-equipment-filter="{{ equipment }}" class="equipment-filter-btn shrink-0 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider transition-colors {{ loop.first ? 'bg-white text-black' : 'admin-glass-panel text-app-muted hover:text-white' }}">
+                            {{ equipment }}
+                        </button>
                     {% endfor %}
+                </div>
+            </section>
 
-                    <div class="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl">
-                        <div class="grid grid-cols-[88px_minmax(220px,1.3fr)_160px_150px_120px_90px] gap-4 border-b border-white/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-app-muted">
-                            <span>ID</span>
-                            <span>Nom / slug</span>
-                            <span>Groupe</span>
-                            <span>Equipement</span>
-                            <span>Source</span>
-                            <span class="text-right">Action</span>
+            <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-admin-grid>
+                {% for item in exerciseRows %}
+                    <article class="admin-card group relative h-56 overflow-hidden rounded-3xl border border-white/5 bg-black"
+                             data-exercise-card
+                             data-search="{{ (item.name ~ ' ' ~ item.muscleGroup ~ ' ' ~ item.equipment ~ ' ' ~ item.slug)|lower }}"
+                             data-equipment="{{ item.equipment }}">
+                        <img src="{{ item.imageUrl }}" class="absolute inset-0 h-full w-full object-cover opacity-50" alt="{{ item.name }}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                        <span class="absolute left-3 top-3 z-10 rounded bg-black/60 px-2.5 py-1 text-[8px] font-black uppercase tracking-widest text-white backdrop-blur-md border border-white/10">
+                            {{ item.equipment }}
+                        </span>
+                        <span class="absolute right-3 top-3 z-10 rounded bg-white/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-widest {{ item.source == 'custom' ? 'text-cyan-300' : 'text-app-accent' }} backdrop-blur-md border border-white/10">
+                            {{ item.source }}
+                        </span>
+
+                        <div class="absolute inset-0 z-20 flex flex-col justify-between bg-[#030303]/90 p-5 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[9px] font-black uppercase tracking-widest text-app-accent">Controles</span>
+                                <button type="button"
+                                        class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-all hover:border-app-accent hover:bg-app-accent hover:text-black active:scale-[0.96]"
+                                        data-action-edit
+                                        data-exercise-id="{{ item.id }}"
+                                        title="Modifier">
+                                    <i data-lucide="edit-2" class="h-4 w-4"></i>
+                                </button>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-black text-white">{{ item.name }}</p>
+                                <p class="mt-0.5 text-[9px] uppercase tracking-widest text-app-muted">{{ item.muscleGroup }} - ID #{{ item.id }}</p>
+                            </div>
                         </div>
 
-                        <div class="max-h-[calc(100vh-220px)] overflow-auto">
-                            {% for item in exercises %}
-                                <article class="grid grid-cols-[88px_minmax(220px,1.3fr)_160px_150px_120px_90px] items-center gap-4 border-b border-white/5 px-5 py-4 text-sm hover:bg-white/[0.035]">
-                                    <span class="font-mono text-xs font-bold text-app-muted">#{{ item.id }}</span>
-                                    <span class="min-w-0">
-                                        <span class="block truncate font-black text-white">{{ item.name }}</span>
-                                        <span class="block truncate text-[11px] font-bold text-app-muted">{{ item.slug }}</span>
-                                    </span>
-                                    <span class="truncate font-bold text-white/90">{{ item.muscleGroup }}</span>
-                                    <span class="truncate text-app-muted">{{ item.equipment }}</span>
-                                    <span class="w-fit rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest {{ item.source == 'custom' ? 'text-cyan-300' : 'text-app-accent' }}">{{ item.source }}</span>
-                                    <span class="text-right">
-                                        <a href="{{ path('admin_exercises_edit', {id: item.id}) }}" class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black text-white hover:border-app-accent/40 hover:text-app-accent">
-                                            Edit
-                                        </a>
-                                    </span>
-                                </article>
-                            {% else %}
-                                <div class="px-5 py-10 text-center text-sm font-bold text-app-muted">Aucun exercice disponible.</div>
-                            {% endfor %}
+                        <div class="pointer-events-none absolute bottom-4 left-4 right-4 z-10">
+                            <h3 class="mb-0.5 text-sm font-black leading-tight text-white">{{ item.name }}</h3>
+                            <p class="text-[9px] uppercase tracking-widest text-app-muted">{{ item.muscleGroup }}</p>
+                        </div>
+                    </article>
+                {% else %}
+                    <div class="col-span-full rounded-[2rem] border border-dashed border-white/10 py-16 text-center text-app-muted">
+                        <i data-lucide="inbox" class="mx-auto mb-3 h-8 w-8 text-app-muted"></i>
+                        <p class="text-sm font-extrabold text-white">Aucun exercice disponible</p>
+                    </div>
+                {% endfor %}
+
+                <div class="col-span-full hidden rounded-[2rem] border border-dashed border-white/10 py-16 text-center text-app-muted" data-empty-state>
+                    <i data-lucide="inbox" class="mx-auto mb-3 h-8 w-8 text-app-muted"></i>
+                    <p class="text-sm font-extrabold text-white">Aucun exercice trouve</p>
+                    <p class="mt-1 text-xs">Ajuste ta recherche ou ton filtre d'equipement.</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="fixed inset-0 z-40 bg-black/85 opacity-0 backdrop-blur-md transition-opacity duration-300 pointer-events-none" data-drawer-overlay></div>
+
+        <aside class="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-md translate-x-full flex-col border-l border-white/10 bg-[#08080a] shadow-2xl transition-transform duration-300 ease-out" data-edit-drawer>
+            <div class="flex items-center justify-between border-b border-white/5 px-6 py-5">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="{{ isEdit ? 'edit-3' : 'plus-circle' }}" class="h-5 w-5 text-app-accent" data-drawer-icon></i>
+                    <h3 class="text-lg font-black text-white" data-drawer-title>{{ isEdit ? 'Modifier l exercice' : 'Ajouter un exercice' }}</h3>
+                </div>
+                <button type="button" class="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-app-muted transition-colors hover:bg-white/10 hover:text-white active:scale-[0.96]" data-close-drawer aria-label="Fermer">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 space-y-6 overflow-y-auto p-6">
+                <div class="space-y-2">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-app-muted">Rendu en temps reel</span>
+                    <div class="relative h-48 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-lg">
+                        <img src="{{ formData.imageUrl|default(exercise.id ? (exercise.imageUrl ?: fallbackImage) : fallbackImage) }}" class="absolute inset-0 h-full w-full object-cover opacity-60" alt="" data-preview-img>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                        <div class="absolute left-3 top-3 rounded border border-white/10 bg-white/20 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-white backdrop-blur-md" data-preview-equipment>
+                            {{ formData.equipment|default(exercise.id ? exercise.equipment : 'Machine') }}
+                        </div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <h4 class="mb-0.5 text-sm font-black leading-tight text-white" data-preview-name>{{ formData.name|default(exercise.id ? exercise.name : 'Nom de l exercice') }}</h4>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-app-muted" data-preview-muscle>{{ formData.muscleGroup|default(exercise.id ? exercise.muscleGroup : 'Categorie') }}</p>
                         </div>
                     </div>
                 </div>
 
-                <aside class="rounded-3xl border border-white/10 bg-[#0b0b0d]/95 p-5 shadow-2xl backdrop-blur-2xl xl:sticky xl:top-6 xl:h-fit">
-                    <div class="mb-5 flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-app-accent">{{ isEdit ? 'Update' : 'Create' }}</p>
-                            <h2 class="mt-1 text-2xl font-black">{{ isEdit ? 'Modifier exercice' : 'Nouvel exercice' }}</h2>
-                            {% if isEdit %}
-                                <p class="mt-1 text-xs font-bold text-app-muted">ID #{{ exercise.id }} - cree le {{ exercise.createdAt|date('d/m/Y') }}</p>
-                            {% else %}
-                                <p class="mt-1 text-xs font-bold text-app-muted">Creation catalogue admin.</p>
-                            {% endif %}
-                        </div>
-                        {% if isEdit %}
-                            <a href="{{ path('admin_exercises_index') }}" class="rounded-xl border border-white/10 bg-white/5 p-2 text-app-muted hover:text-white" aria-label="Revenir a la creation">
-                                <i data-lucide="x" class="h-4 w-4"></i>
-                            </a>
-                        {% endif %}
+                <form method="post" action="{{ isEdit ? path('admin_exercises_update', {id: exercise.id}) : path('admin_exercises_create') }}" class="space-y-4" data-exercise-form>
+                    <input type="hidden" name="_token" value="{{ csrf_token(isEdit ? 'admin_exercise_' ~ exercise.id : 'admin_exercise') }}" data-token-input>
+                    {% set sourceValue = formData.source|default(exercise.id ? exercise.source : 'vigor') %}
+
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">Nom complet</span>
+                        <input type="text" name="name" value="{{ formData.name|default(exercise.id ? exercise.name : '') }}" maxlength="120" required class="admin-input px-4 py-3 text-sm font-extrabold" placeholder="Ex: Developpe incline halteres" data-preview-field="name">
+                    </label>
+
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">Slug unique</span>
+                        <input type="text" name="slug" value="{{ formData.slug|default(exercise.id ? exercise.slug : '') }}" maxlength="140" class="admin-input px-4 py-3 text-sm font-extrabold" placeholder="auto depuis le nom">
+                    </label>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label class="flex flex-col gap-1.5">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">Groupe musculaire</span>
+                            <input name="muscleGroup" value="{{ formData.muscleGroup|default(exercise.id ? exercise.muscleGroup : '') }}" list="admin-muscle-groups" maxlength="60" required class="admin-input px-4 py-3 text-sm font-extrabold" placeholder="Pectoraux" data-preview-field="muscleGroup">
+                        </label>
+
+                        <label class="flex flex-col gap-1.5">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">Equipement requis</span>
+                            <input name="equipment" value="{{ formData.equipment|default(exercise.id ? exercise.equipment : '') }}" list="admin-equipments" maxlength="60" required class="admin-input px-4 py-3 text-sm font-extrabold" placeholder="Machine" data-preview-field="equipment">
+                        </label>
                     </div>
 
-                    {% if error %}
-                        <div class="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-300">{{ error }}</div>
-                    {% endif %}
-
-                    <form method="post" action="{{ isEdit ? path('admin_exercises_update', {id: exercise.id}) : path('admin_exercises_create') }}" class="space-y-4">
-                        <input type="hidden" name="_token" value="{{ csrf_token(isEdit ? 'admin_exercise_' ~ exercise.id : 'admin_exercise') }}">
-
-                        <label class="block">
-                            <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Nom</span>
-                            <input name="name" value="{{ formData.name|default(exercise.id ? exercise.name : '') }}" maxlength="120" required class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                        </label>
-
-                        <label class="block">
-                            <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Slug unique</span>
-                            <input name="slug" value="{{ formData.slug|default(exercise.id ? exercise.slug : '') }}" maxlength="140" placeholder="auto depuis le nom" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                        </label>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="block">
-                                <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Groupe</span>
-                                <input name="muscleGroup" value="{{ formData.muscleGroup|default(exercise.id ? exercise.muscleGroup : '') }}" maxlength="60" required class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                            </label>
-
-                            <label class="block">
-                                <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Equipement</span>
-                                <input name="equipment" value="{{ formData.equipment|default(exercise.id ? exercise.equipment : '') }}" maxlength="60" required class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                            </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">URL de l'image d'illustration</span>
+                        <input type="url" name="imageUrl" value="{{ formData.imageUrl|default(exercise.id ? exercise.imageUrl : '') }}" maxlength="255" class="admin-input px-4 py-3 text-sm font-extrabold" placeholder="https://..." data-preview-field="imageUrl">
+                        <div class="mt-1 flex flex-wrap gap-2">
+                            <button type="button" class="rounded bg-app-accent/10 px-2.5 py-1 text-[9px] font-black text-app-accent transition hover:bg-app-accent hover:text-black" data-preset-image="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=800&q=80">Preset Halteres</button>
+                            <button type="button" class="rounded bg-app-accent/10 px-2.5 py-1 text-[9px] font-black text-app-accent transition hover:bg-app-accent hover:text-black" data-preset-image="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=800&q=80">Preset Barre</button>
+                            <button type="button" class="rounded bg-app-accent/10 px-2.5 py-1 text-[9px] font-black text-app-accent transition hover:bg-app-accent hover:text-black" data-preset-image="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80">Preset Dips</button>
                         </div>
+                    </label>
 
-                        <label class="block">
-                            <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Image URL</span>
-                            <input name="imageUrl" value="{{ formData.imageUrl|default(exercise.id ? exercise.imageUrl : '') }}" maxlength="255" type="url" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                        </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-app-muted">Source</span>
+                        <select name="source" class="admin-input bg-[#08080a] px-4 py-3 text-sm font-extrabold">
+                            <option value="vigor" {{ sourceValue == 'vigor' ? 'selected' }}>vigor</option>
+                            <option value="custom" {{ sourceValue == 'custom' ? 'selected' }}>custom</option>
+                        </select>
+                    </label>
 
-                        <label class="block">
-                            <span class="mb-2 block text-[10px] font-black uppercase tracking-widest text-app-muted">Source</span>
-                            {% set sourceValue = formData.source|default(exercise.id ? exercise.source : 'vigor') %}
-                            <select name="source" class="w-full rounded-2xl border border-white/10 bg-[#111113] px-4 py-3 text-sm font-bold text-white outline-none focus:border-app-accent">
-                                <option value="vigor" {{ sourceValue == 'vigor' ? 'selected' }}>vigor</option>
-                                <option value="custom" {{ sourceValue == 'custom' ? 'selected' }}>custom</option>
-                            </select>
-                        </label>
+                    <div class="flex gap-3 border-t border-white/5 pt-6">
+                        <button type="button" class="flex-1 rounded-xl border border-white/10 py-3.5 text-xs font-extrabold text-white transition hover:bg-white/5 active:scale-[0.96]" data-close-drawer>Annuler</button>
+                        <button type="submit" class="flex-[1.5] rounded-xl bg-app-accent py-3.5 text-xs font-black uppercase tracking-wider text-black shadow-lg transition hover:bg-lime-400 active:scale-[0.96]">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
 
-                        <button type="submit" class="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-app-accent px-5 py-4 text-sm font-black text-black shadow-neon active:scale-[0.99]">
-                            <i data-lucide="{{ isEdit ? 'save' : 'plus' }}" class="h-4 w-4"></i>
-                            {{ isEdit ? 'Enregistrer les modifications' : 'Creer exercice' }}
-                        </button>
-                    </form>
-                </aside>
-            </section>
-        </div>
+        <datalist id="admin-muscle-groups">
+            {% for muscleGroup in muscleGroups %}
+                <option value="{{ muscleGroup }}"></option>
+            {% endfor %}
+        </datalist>
+        <datalist id="admin-equipments">
+            {% for equipment in equipments %}
+                <option value="{{ equipment }}"></option>
+            {% endfor %}
+        </datalist>
     </main>
+
+    <script>
+        window.adminExercises = {{ exerciseRows|json_encode|raw }};
+        window.adminExerciseFormState = {
+            mode: '{{ mode }}',
+            hasError: {{ error ? 'true' : 'false' }},
+            createUrl: '{{ path('admin_exercises_create') }}',
+            createCsrf: '{{ csrf_token('admin_exercise') }}',
+            fallbackImage: '{{ fallbackImage }}'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const exercises = window.adminExercises || [];
+            const state = window.adminExerciseFormState;
+            const drawer = document.querySelector('[data-edit-drawer]');
+            const overlay = document.querySelector('[data-drawer-overlay]');
+            const form = document.querySelector('[data-exercise-form]');
+            const tokenInput = document.querySelector('[data-token-input]');
+            const title = document.querySelector('[data-drawer-title]');
+            const icon = document.querySelector('[data-drawer-icon]');
+            const search = document.querySelector('[data-admin-search]');
+            const cards = Array.from(document.querySelectorAll('[data-exercise-card]'));
+            const emptyState = document.querySelector('[data-empty-state]');
+            let activeEquipment = 'Tous';
+
+            const refreshIcons = () => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            };
+
+            const openDrawer = () => {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100');
+                drawer.classList.remove('translate-x-full');
+                refreshIcons();
+            };
+
+            const closeDrawer = () => {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                overlay.classList.remove('opacity-100');
+                drawer.classList.add('translate-x-full');
+            };
+
+            const setField = (name, value) => {
+                const field = form.elements.namedItem(name);
+                if (field) {
+                    field.value = value || '';
+                }
+            };
+
+            const updatePreview = () => {
+                const imageValue = form.elements.namedItem('imageUrl').value || state.fallbackImage;
+                document.querySelector('[data-preview-name]').textContent = form.elements.namedItem('name').value || 'Nom de l exercice';
+                document.querySelector('[data-preview-muscle]').textContent = form.elements.namedItem('muscleGroup').value || 'Categorie';
+                document.querySelector('[data-preview-equipment]').textContent = form.elements.namedItem('equipment').value || 'Machine';
+                document.querySelector('[data-preview-img]').src = imageValue;
+            };
+
+            const openCreate = () => {
+                form.action = state.createUrl;
+                tokenInput.value = state.createCsrf;
+                title.textContent = 'Ajouter un exercice';
+                icon.setAttribute('data-lucide', 'plus-circle');
+                setField('name', '');
+                setField('slug', '');
+                setField('muscleGroup', 'Pectoraux');
+                setField('equipment', 'Machine');
+                setField('imageUrl', '');
+                setField('source', 'vigor');
+                updatePreview();
+                openDrawer();
+            };
+
+            const openEdit = (id) => {
+                const exercise = exercises.find((item) => Number(item.id) === Number(id));
+                if (!exercise) {
+                    return;
+                }
+
+                form.action = exercise.updateUrl;
+                tokenInput.value = exercise.csrf;
+                title.textContent = 'Modifier l exercice';
+                icon.setAttribute('data-lucide', 'edit-3');
+                setField('name', exercise.name);
+                setField('slug', exercise.slug);
+                setField('muscleGroup', exercise.muscleGroup);
+                setField('equipment', exercise.equipment);
+                setField('imageUrl', exercise.imageUrl === state.fallbackImage ? '' : exercise.imageUrl);
+                setField('source', exercise.source);
+                updatePreview();
+                openDrawer();
+            };
+
+            const filterCards = () => {
+                const query = (search.value || '').trim().toLowerCase();
+                let visibleCount = 0;
+
+                cards.forEach((card) => {
+                    const matchesSearch = !query || card.dataset.search.includes(query);
+                    const matchesEquipment = activeEquipment === 'Tous' || card.dataset.equipment === activeEquipment;
+                    const visible = matchesSearch && matchesEquipment;
+                    card.classList.toggle('hidden', !visible);
+                    visibleCount += visible ? 1 : 0;
+                });
+
+                emptyState.classList.toggle('hidden', visibleCount > 0);
+            };
+
+            document.querySelector('[data-action-create]')?.addEventListener('click', openCreate);
+            document.querySelectorAll('[data-close-drawer]').forEach((button) => button.addEventListener('click', closeDrawer));
+            overlay.addEventListener('click', closeDrawer);
+            search?.addEventListener('input', filterCards);
+
+            document.querySelectorAll('[data-action-edit]').forEach((button) => {
+                button.addEventListener('click', () => openEdit(button.dataset.exerciseId));
+            });
+
+            document.querySelectorAll('[data-equipment-filter]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    activeEquipment = button.dataset.equipmentFilter;
+                    document.querySelectorAll('[data-equipment-filter]').forEach((item) => {
+                        const active = item === button;
+                        item.classList.toggle('bg-white', active);
+                        item.classList.toggle('text-black', active);
+                        item.classList.toggle('admin-glass-panel', !active);
+                        item.classList.toggle('text-app-muted', !active);
+                    });
+                    filterCards();
+                });
+            });
+
+            form.querySelectorAll('[data-preview-field]').forEach((field) => {
+                field.addEventListener('input', updatePreview);
+            });
+
+            document.querySelectorAll('[data-preset-image]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    setField('imageUrl', button.dataset.presetImage);
+                    updatePreview();
+                });
+            });
+
+            if (state.mode === 'edit' && exercises.length > 0) {
+                openDrawer();
+            }
+
+            if (state.hasError) {
+                openDrawer();
+            }
+
+            refreshIcons();
+        });
+    </script>
 {% endblock %}
