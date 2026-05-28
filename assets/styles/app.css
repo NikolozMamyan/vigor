@@ -80,8 +80,20 @@ body {
     bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + var(--app-viewport-bottom) + 0.85rem));
 }
 
+body.overflow-hidden .app-header,
+body.overflow-hidden .app-bottom-nav:not(.builder-bottom-nav),
+body.overflow-hidden .workout-finish-bar {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .workout-builder-open > .app-bottom-nav:not(.builder-bottom-nav) {
     display: none;
+}
+
+.workout-finish-bar {
+    bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + var(--app-viewport-bottom) + 5.25rem));
+    z-index: 50;
 }
 
 .app-rest-timer {
