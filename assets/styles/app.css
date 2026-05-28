@@ -83,7 +83,7 @@ body {
 body.overflow-hidden .app-header,
 body.overflow-hidden .app-bottom-nav:not(.builder-bottom-nav),
 body.overflow-hidden .workout-finish-bar {
-    opacity: 0;
+    display: none;
     pointer-events: none;
 }
 

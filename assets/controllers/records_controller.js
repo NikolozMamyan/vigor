@@ -19,6 +19,10 @@ export default class extends Controller {
         records: Object,
     };
 
+    disconnect() {
+        document.body.classList.remove('overflow-hidden');
+    }
+
     filter(event) {
         const category = event.params.category || 'all';
 
@@ -61,6 +65,7 @@ export default class extends Controller {
 
         this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
         this.modalTarget.querySelector('.records-modal-box')?.classList.remove('translate-y-full');
+        document.body.classList.add('overflow-hidden');
 
         if (window.lucide) {
             window.lucide.createIcons();
@@ -74,6 +79,7 @@ export default class extends Controller {
 
         this.modalTarget.classList.add('opacity-0', 'pointer-events-none');
         this.modalTarget.querySelector('.records-modal-box')?.classList.add('translate-y-full');
+        document.body.classList.remove('overflow-hidden');
     }
 
     async share() {
