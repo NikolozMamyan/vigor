@@ -1,18 +1,25 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['sets', 'exerciseModal', 'exerciseSearch', 'exerciseOptions', 'heroImage', 'exerciseMeta', 'headerTitle', 'headerSubtitle', 'targetLabel', 'exerciseStrip'];
+    static targets = ['sets', 'exerciseModal', 'exerciseSearch', 'exerciseOptions', 'heroImage', 'exerciseMeta', 'headerTitle', 'headerSubtitle', 'targetLabel', 'exerciseStrip', 'progressRing', 'progressCircle', 'progressPercent', 'progressLabel', 'exerciseSetsDone', 'exerciseSetsTotal'];
     static values = {
         sessionId: Number,
         sessionExerciseId: Number,
+        restSeconds: Number,
         exercises: Array,
     };
 
     connect() {
+        this.progressObserver = null;
+        this.progressFrame = null;
         this.renderExerciseOptions();
+        this.observeProgress();
+        this.updateProgress();
     }
 
     disconnect() {
+        this.progressObserver?.disconnect();
+        window.cancelAnimationFrame(this.progressFrame);
         document.body.classList.remove('overflow-hidden');
     }
 
@@ -26,6 +33,8 @@ export default class extends Controller {
         if (window.lucide) {
             window.lucide.createIcons();
         }
+
+        this.updateProgress();
     }
 
     nextPosition() {
@@ -247,6 +256,8 @@ export default class extends Controller {
     applySessionExercise(sessionExercise) {
         this.sessionExerciseIdValue = sessionExercise.id;
         this.element.dataset.activeWorkoutSessionExerciseIdValue = sessionExercise.id;
+        this.restSecondsValue = Number.parseInt(sessionExercise.restSeconds, 10) || 90;
+        this.element.dataset.activeWorkoutRestSecondsValue = this.restSecondsValue.toString();
         this.heroImageTarget.src = sessionExercise.image;
         this.exerciseMetaTarget.textContent = `${sessionExercise.muscleGroup} - ${sessionExercise.equipment}`;
         this.headerTitleTarget.textContent = 'Seance libre';
@@ -254,6 +265,7 @@ export default class extends Controller {
         this.targetLabelTarget.textContent = sessionExercise.targetLabel || '3 x 8-10';
         this.renderSets(sessionExercise.sets || []);
         this.markActivePill(sessionExercise.id);
+        this.updateProgress();
     }
 
     renderSets(sets) {
@@ -262,6 +274,8 @@ export default class extends Controller {
         if (window.lucide) {
             window.lucide.createIcons();
         }
+
+        this.updateProgress();
     }
 
     setTemplate(set) {
@@ -343,6 +357,75 @@ export default class extends Controller {
         });
     }
 
+    observeProgress() {
+        if (!this.hasSetsTarget || !('MutationObserver' in window)) {
+            return;
+        }
+
+        this.progressObserver = new MutationObserver(() => this.queueProgressUpdate());
+        this.progressObserver.observe(this.setsTarget, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
+
+    queueProgressUpdate() {
+        window.cancelAnimationFrame(this.progressFrame);
+        this.progressFrame = window.requestAnimationFrame(() => this.updateProgress());
+    }
+
+    updateProgress() {
+        if (!this.hasSetsTarget) {
+            return;
+        }
+
+        const rows = Array.from(this.setsTarget.querySelectorAll('[data-controller~="workout-set"]'));
+        const total = rows.length;
+        const completed = rows.filter((row) => row.classList.contains('checked')).length;
+        const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        if (this.hasExerciseSetsDoneTarget) {
+            this.exerciseSetsDoneTarget.textContent = completed.toString();
+        }
+
+        if (this.hasExerciseSetsTotalTarget) {
+            this.exerciseSetsTotalTarget.textContent = total.toString();
+        }
+
+        if (this.hasProgressPercentTarget) {
+            this.progressPercentTarget.textContent = `${percent}%`;
+        }
+
+        if (this.hasProgressLabelTarget) {
+            this.progressLabelTarget.textContent = `${completed}/${total}`;
+        }
+
+        if (this.hasProgressCircleTarget) {
+            const circumference = this.progressCircleLength();
+            this.progressCircleTarget.style.strokeDasharray = `${circumference}`;
+            this.progressCircleTarget.style.strokeDashoffset = `${circumference - (circumference * percent / 100)}`;
+        }
+
+        if (this.hasProgressRingTarget) {
+            this.progressRingTarget.setAttribute('aria-label', `Progression ${completed} sur ${total} series`);
+            this.progressRingTarget.classList.toggle('is-complete', total > 0 && completed === total);
+        }
+    }
+
+    progressCircleLength() {
+        const dashArray = Number.parseFloat(this.progressCircleTarget.getAttribute('stroke-dasharray') || '');
+
+        if (Number.isFinite(dashArray) && dashArray > 0) {
+            return dashArray;
+        }
+
+        const radius = Number.parseFloat(this.progressCircleTarget.getAttribute('r') || '34');
+
+        return 2 * Math.PI * radius;
+    }
+
     async updateSession(button, action) {
         if (!this.hasSessionIdValue || this.sessionIdValue <= 0) {
             this.recoverStaleWorkoutState();
@@ -395,7 +478,15 @@ export default class extends Controller {
             },
             bubbles: true,
         }));
-        window.history.pushState({ view: nextView }, '', `/app/${nextView}`);
+        this.replaceCurrentHistoryState(nextView);
+    }
+
+    replaceCurrentHistoryState(view) {
+        const currentState = window.history.state && typeof window.history.state === 'object'
+            ? window.history.state
+            : {};
+
+        window.history.replaceState({ ...currentState, view }, '', `/app/${view}`);
     }
 
     escapeHtml(value) {

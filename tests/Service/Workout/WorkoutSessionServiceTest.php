@@ -124,8 +124,15 @@ final class WorkoutSessionServiceTest extends TestCase
         $programExerciseRepository = $this->createStub(WorkoutProgramExerciseReaderInterface::class);
         $programExerciseRepository->method('findForProgram')->willReturn([$programExercise]);
 
+        $persistedSessionExercises = [];
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::exactly(6))->method('persist');
+        $entityManager->expects(self::exactly(6))
+            ->method('persist')
+            ->willReturnCallback(function (object $entity) use (&$persistedSessionExercises): void {
+                if ($entity instanceof WorkoutSessionExercise) {
+                    $persistedSessionExercises[] = $entity;
+                }
+            });
         $entityManager->expects(self::once())->method('flush');
 
         $result = $this->createService($entityManager, $sessionRepository, $programExerciseRepository)->startProgram($program);
@@ -133,6 +140,8 @@ final class WorkoutSessionServiceTest extends TestCase
         self::assertSame(WorkoutSession::TYPE_PROGRAM, $result->getType());
         self::assertSame('Push', $result->getName());
         self::assertSame($program, $result->getProgram());
+        self::assertCount(1, $persistedSessionExercises);
+        self::assertSame(120, $persistedSessionExercises[0]->getRestSeconds());
     }
 
     public function testRemoveExerciseRemovesSessionExerciseWhenSessionKeepsAnotherExercise(): void

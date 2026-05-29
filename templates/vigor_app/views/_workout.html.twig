@@ -17,6 +17,7 @@
          data-controller="active-workout"
          data-active-workout-session-id-value="{{ activeWorkout.sessionId ?? 0 }}"
          data-active-workout-session-exercise-id-value="{{ activeWorkout.sessionExerciseId ?? 0 }}"
+         data-active-workout-rest-seconds-value="{{ activeWorkout.restSeconds ?? 90 }}"
          data-active-workout-exercises-value="{{ exerciseCatalog.exercises|json_encode|e('html_attr') }}">
 
     {% if activeWorkout.hasActiveSession is not defined or activeWorkout.hasActiveSession %}
@@ -35,17 +36,18 @@
             <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-transparent"></div>
             <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.6)_100%)]"></div>
 
-            {# Top bar : statut + bouton annuler discret #}
-            <div class="absolute top-28 left-0 right-0 px-6 flex items-center justify-between">
+            {# Top bar : statut + action annuler #}
+            <div class="absolute top-28 left-0 right-0 px-6 flex items-center justify-between gap-3">
                 <span class="glass-panel px-3 py-1.5 rounded-full text-[10px] font-bold text-white uppercase tracking-widest border-white/20 flex items-center gap-2">
                     <span class="w-1.5 h-1.5 rounded-full bg-app-accent animate-pulse"></span>
                     {{ activeWorkout.statusLabel }}
                 </span>
                 <button type="button"
-                        class="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-app-muted hover:text-rose-400 transition-colors"
+                        class="h-9 shrink-0 rounded-full bg-rose-500/15 border border-rose-400/30 px-3 flex items-center justify-center gap-1.5 text-rose-100 shadow-[0_0_24px_rgba(244,63,94,0.16)] hover:bg-rose-500/25 hover:border-rose-300/50 active:scale-95 transition-all"
                         data-action="active-workout#cancelSession"
                         aria-label="Annuler la séance">
                     <i data-lucide="x" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest">Annuler</span>
                 </button>
             </div>
 
@@ -279,7 +281,8 @@
             <div class="space-y-3" data-workout-programs-target="list">
                 {% for program in activeWorkout.programs %}
                     <article class="glass-panel rounded-2xl p-4 space-y-3 group hover:border-white/20 transition-colors"
-                             data-program-row-id="{{ program.id }}">
+                             data-program-row-id="{{ program.id }}"
+                             data-program-payload="{{ program|json_encode|e('html_attr') }}">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center group-hover:bg-app-accent/20 transition-colors">
                                 <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
@@ -288,6 +291,13 @@
                                 <h4 class="text-sm font-extrabold text-white truncate">{{ program.name }}</h4>
                                 <p class="text-[11px] text-app-muted">{{ program.description }} · {{ program.meta }}</p>
                             </div>
+                            <button type="button"
+                                    class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center border border-white/10 transition-colors"
+                                    data-action="workout-programs#openEdit"
+                                    data-program-id="{{ program.id }}"
+                                    aria-label="Modifier {{ program.name }}">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
                             <button type="button"
                                     class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10 transition-colors"
                                     data-action="workout-programs#delete"

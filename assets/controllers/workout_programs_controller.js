@@ -9,6 +9,9 @@ export default class extends Controller {
     connect() {
         this.selectedExercises = new Map();
         this.currentTab = 'library';
+        this.editingProgramId = null;
+        this.editingProgramRow = null;
+        this.editingProgramPayload = null;
         this.boundSyncBuilderViewport = this.syncBuilderViewport.bind(this);
         this.boundKeepFocusedFieldVisible = this.keepFocusedFieldVisible.bind(this);
         this.renderExerciseOptions();
@@ -24,6 +27,33 @@ export default class extends Controller {
     }
 
     openCreate() {
+        this.clearEditState();
+        this.resetCreateForm();
+        this.openBuilder();
+        this.switchBuilderTab('library');
+        this.renderExerciseOptions();
+    }
+
+    openEdit(event) {
+        const row = event.currentTarget.closest('[data-program-row-id]');
+        const program = this.readProgramPayload(row);
+
+        if (!program) {
+            return;
+        }
+
+        this.editingProgramId = program.id;
+        this.editingProgramRow = row;
+        this.editingProgramPayload = program;
+        this.loadProgram(program);
+        this.openBuilder();
+        this.switchBuilderTab('config');
+        this.renderExerciseOptions();
+        this.renderSelectedExercises();
+        this.updateBuilderControls();
+    }
+
+    openBuilder() {
         this.modalTarget.classList.remove('opacity-0', 'pointer-events-none');
         this.modalTarget.classList.add('opacity-100');
         document.body.classList.add('overflow-hidden');
@@ -31,8 +61,6 @@ export default class extends Controller {
         this.attachBuilderViewportListeners();
         this.syncBuilderViewport();
         window.setTimeout(() => this.nameTarget?.focus(), 80);
-        this.switchBuilderTab('library');
-        this.renderExerciseOptions();
     }
 
     closeCreate() {
@@ -138,11 +166,21 @@ export default class extends Controller {
         this.selectedListTarget.classList.remove('border', 'border-rose-500/50', 'rounded-2xl');
         this.setBusy(button, true);
 
-        const program = await this.request('/api/workout-programs', 'POST', { name, exercises });
+        const editing = Boolean(this.editingProgramId);
+        const url = editing ? `/api/workout-programs/${this.editingProgramId}` : '/api/workout-programs';
+        const method = editing ? 'PATCH' : 'POST';
+        const program = await this.request(url, method, { name, exercises });
 
         if (program) {
-            this.prependProgram(program);
+            if (editing) {
+                this.replaceProgram(program);
+            } else {
+                this.prependProgram(program);
+            }
+
+            this.setBusy(button, false);
             this.closeCreate();
+            this.clearEditState();
             this.resetCreateForm();
             return;
         }
@@ -263,7 +301,51 @@ export default class extends Controller {
             },
             bubbles: true,
         }));
-        window.history.pushState({ view: nextView }, '', `/app/${nextView}`);
+        this.replaceCurrentHistoryState(nextView);
+    }
+
+    replaceCurrentHistoryState(view) {
+        const currentState = window.history.state && typeof window.history.state === 'object'
+            ? window.history.state
+            : {};
+
+        window.history.replaceState({ ...currentState, view }, '', `/app/${view}`);
+    }
+
+    readProgramPayload(row) {
+        if (!row?.dataset.programPayload) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(row.dataset.programPayload);
+        } catch {
+            return null;
+        }
+    }
+
+    loadProgram(program) {
+        this.nameTarget.value = program.name || 'Mon programme';
+        this.searchTarget.value = '';
+        this.selectedExercises.clear();
+
+        (program.exercises || []).forEach((programExercise) => {
+            const exerciseId = Number.parseInt(programExercise.exerciseId, 10);
+            const exercise = this.exercisesValue.find((item) => Number.parseInt(item.id, 10) === exerciseId);
+
+            if (!exercise) {
+                return;
+            }
+
+            this.selectedExercises.set(exercise.id, {
+                exercise,
+                targetWeight: programExercise.targetWeight ?? '',
+                targetSets: programExercise.targetSets ?? 3,
+                targetRepsMin: programExercise.targetRepsMin ?? 8,
+                targetRepsMax: programExercise.targetRepsMax ?? 10,
+                restSeconds: programExercise.restSeconds ?? 90,
+            });
+        });
     }
 
     filterExercises() {
@@ -485,8 +567,25 @@ export default class extends Controller {
         }
     }
 
+    replaceProgram(program) {
+        const row = this.editingProgramRow || this.element.querySelector(`[data-program-row-id="${program.id}"]`);
+
+        if (!row) {
+            this.prependProgram(program);
+            return;
+        }
+
+        row.insertAdjacentHTML('afterend', this.programCard(program));
+        row.remove();
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
     programCard(program) {
-        const exercises = (program.exercises || []).map((exercise) => `
+        const programExercises = program.exercises || [];
+        const exercises = programExercises.slice(0, 4).map((exercise) => `
             <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0 flex items-center gap-2">
                     <img src="${this.escapeAttribute(exercise.image)}" alt="" class="w-8 h-8 rounded-xl object-cover border border-white/10">
@@ -498,30 +597,50 @@ export default class extends Controller {
                 <span class="text-[10px] font-bold text-app-accent whitespace-nowrap">${this.escapeHtml(exercise.target)}</span>
             </div>
         `).join('');
+        const remaining = programExercises.length > 4
+            ? `<p class="text-[10px] text-app-muted text-center pt-1">+ ${programExercises.length - 4} autres</p>`
+            : '';
 
         return `
-            <article class="glass-panel rounded-2xl p-4 space-y-3" data-program-row-id="${program.id}">
+            <article class="glass-panel rounded-2xl p-4 space-y-3 group hover:border-white/20 transition-colors" data-program-row-id="${program.id}" data-program-payload="${this.escapeAttribute(JSON.stringify(program))}">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center">
+                    <div class="w-12 h-12 rounded-2xl bg-app-accent/10 border border-app-accent/20 flex items-center justify-center group-hover:bg-app-accent/20 transition-colors">
                         <i data-lucide="calendar-days" class="w-5 h-5 text-app-accent"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="text-sm font-extrabold text-white truncate">${this.escapeHtml(program.name)}</h4>
                         <p class="text-[11px] text-app-muted">${this.escapeHtml(program.description || 'Programme personnalise')} - ${this.escapeHtml(program.meta || '')}</p>
                     </div>
-                    <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10" data-action="workout-programs#delete" data-program-id="${program.id}" aria-label="Supprimer ${this.escapeAttribute(program.name)}">
+                    <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-white hover:bg-white/10 flex items-center justify-center border border-white/10 transition-colors" data-action="workout-programs#openEdit" data-program-id="${program.id}" aria-label="Modifier ${this.escapeAttribute(program.name)}">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="w-10 h-10 rounded-2xl bg-white/5 text-app-muted hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center border border-white/10 transition-colors" data-action="workout-programs#delete" data-program-id="${program.id}" aria-label="Supprimer ${this.escapeAttribute(program.name)}">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
-                    <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon" data-action="workout-programs#start" data-program-id="${program.id}" aria-label="Demarrer ${this.escapeAttribute(program.name)}">
+                    <button type="button" class="w-11 h-11 rounded-2xl bg-app-accent text-black flex items-center justify-center shadow-neon active:scale-95 transition-transform" data-action="workout-programs#start" data-program-id="${program.id}" aria-label="Demarrer ${this.escapeAttribute(program.name)}">
                         <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
                     </button>
                 </div>
-                <div class="space-y-2 border-t border-white/5 pt-3">${exercises}</div>
+                <div class="space-y-2 border-t border-white/5 pt-3">${exercises}${remaining}</div>
             </article>
         `;
     }
 
+    clearEditState() {
+        this.editingProgramId = null;
+        this.editingProgramRow = null;
+        this.editingProgramPayload = null;
+    }
+
     resetCreateForm() {
+        if (this.editingProgramPayload) {
+            this.loadProgram(this.editingProgramPayload);
+            this.switchBuilderTab('config');
+            this.renderExerciseOptions();
+            this.renderSelectedExercises();
+            return;
+        }
+
         this.nameTarget.value = 'Push Day - Force';
         this.searchTarget.value = '';
         this.selectedExercises.clear();
@@ -570,7 +689,9 @@ export default class extends Controller {
             return;
         }
 
-        mainAction.textContent = this.currentTab === 'library' ? 'Configurer' : 'Enregistrer';
+        mainAction.textContent = this.currentTab === 'library'
+            ? 'Configurer'
+            : (this.editingProgramId ? 'Mettre a jour' : 'Enregistrer');
         const active = count > 0;
         mainAction.classList.toggle('bg-app-accent', this.currentTab === 'library' && active);
         mainAction.classList.toggle('text-black', active);

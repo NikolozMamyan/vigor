@@ -1,6 +1,5 @@
-const CACHE_NAME = 'vigor-v5';
+const CACHE_NAME = 'vigor-v6';
 const APP_SHELL_URLS = [
-    '/app',
     '/manifest.webmanifest',
     '/icons/vigor-icon.svg',
     '/icons/vigor-notification.svg',
@@ -40,7 +39,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (request.mode === 'navigate') {
-        event.respondWith(networkFirstPage(request));
+        event.respondWith(networkOnlyPage(request));
         return;
     }
 
@@ -89,17 +88,15 @@ function networkFirst(request) {
         .catch(() => caches.match(request));
 }
 
-function networkFirstPage(request) {
+function networkOnlyPage(request) {
     return fetch(request, { cache: 'no-store' })
-        .then((response) => {
-            if (response.ok) {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put('/app', copy));
-            }
-
-            return response;
-        })
-        .catch(() => caches.match('/app'));
+        .catch(() => new Response('Connexion indisponible. Recharge la page quand le reseau revient.', {
+            status: 503,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store',
+            },
+        }));
 }
 
 function staleWhileRevalidate(request) {

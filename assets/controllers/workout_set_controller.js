@@ -84,7 +84,6 @@ export default class extends Controller {
     async remove() {
         this.removed = true;
         window.clearTimeout(this.saveTimeout);
-        this.element.dispatchEvent(new CustomEvent('workout-set:timer-close', { bubbles: true }));
         this.element.remove();
 
         let setId = this.hasIdValue ? this.idValue : 0;
@@ -182,10 +181,18 @@ export default class extends Controller {
         const nextLabel = nextPosition ? `Prochain set : serie ${nextPosition}` : 'Passe a la suite de ta seance';
 
         return {
+            restSeconds: this.restSeconds(),
             notificationTitle: 'Repos termine',
             notificationBody: `${nextLabel} - ${exerciseTitle}`,
             url: '/app/workout',
         };
+    }
+
+    restSeconds() {
+        const workoutView = this.element.closest('[data-controller~="active-workout"]');
+        const seconds = Number.parseInt(workoutView?.dataset.activeWorkoutRestSecondsValue, 10);
+
+        return Number.isFinite(seconds) && seconds > 0 ? seconds : 90;
     }
 
     async request(url, method, payload = null) {

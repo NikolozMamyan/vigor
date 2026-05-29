@@ -6,12 +6,17 @@ export default class extends Controller {
         soundUrl: String,
     };
 
+    static storageKey = 'vigor.restTimer';
+
     connect() {
         this.totalTime = 90;
         this.timeLeft = 90;
+        this.endsAt = null;
         this.interval = null;
         this.expanded = false;
         this.active = false;
+        this.notified = false;
+        this.notificationContext = null;
         this.particles = [];
         this.particleFrame = null;
         this.canvasContext = this.hasCanvasTarget ? this.canvasTarget.getContext('2d') : null;
@@ -24,22 +29,29 @@ export default class extends Controller {
         this.boundWorkoutSetTimerStart = (event) => this.startFromSet(event);
         this.boundWorkoutSetTimerClose = () => this.close();
         this.boundResizeCanvas = () => this.resizeCanvas();
+        this.boundBeforeUnload = () => this.persistState();
 
         document.addEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
         document.addEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
         window.addEventListener('resize', this.boundResizeCanvas);
+        window.addEventListener('beforeunload', this.boundBeforeUnload);
 
         this.resizeCanvas();
-        this.update();
-        this.minify();
+
+        if (!this.restoreState()) {
+            this.update();
+            this.minify();
+        }
     }
 
     disconnect() {
+        this.persistState();
         window.clearInterval(this.interval);
         window.cancelAnimationFrame(this.particleFrame);
         document.removeEventListener('workout-set:timer-start', this.boundWorkoutSetTimerStart);
         document.removeEventListener('workout-set:timer-close', this.boundWorkoutSetTimerClose);
         window.removeEventListener('resize', this.boundResizeCanvas);
+        window.removeEventListener('beforeunload', this.boundBeforeUnload);
     }
 
     startFromSet(event = null) {
@@ -66,17 +78,10 @@ export default class extends Controller {
         this.notified = false;
         this.active = true;
         this.update();
+        this.persistState();
         this.show();
         this.expand();
-
-        this.interval = window.setInterval(() => {
-            this.timeLeft = Math.ceil((this.endsAt - Date.now()) / 1000);
-            this.update();
-
-            if (this.timeLeft <= 0) {
-                this.finish();
-            }
-        }, 1000);
+        this.scheduleTick();
     }
 
     show() {
@@ -87,6 +92,8 @@ export default class extends Controller {
     close() {
         window.clearInterval(this.interval);
         this.active = false;
+        this.endsAt = null;
+        this.clearStoredState();
 
         if (!this.hasModalTarget) {
             return;
@@ -103,6 +110,7 @@ export default class extends Controller {
         }
 
         this.expanded = true;
+        this.persistState();
         this.surfaceTarget.style.width = '330px';
         this.surfaceTarget.style.height = '230px';
         this.surfaceTarget.style.borderRadius = '32px';
@@ -126,6 +134,7 @@ export default class extends Controller {
         }
 
         this.expanded = false;
+        this.persistState();
         this.expandedTarget.classList.add('opacity-0', 'pointer-events-none');
         this.expandedTarget.classList.remove('pointer-events-auto');
 
@@ -161,6 +170,7 @@ export default class extends Controller {
         this.totalTime = Math.max(this.totalTime, this.timeLeft);
         this.endsAt = Date.now() + this.timeLeft * 1000;
         this.update();
+        this.persistState();
 
         if (navigator.vibrate) {
             navigator.vibrate(25);
@@ -178,8 +188,10 @@ export default class extends Controller {
 
         window.clearInterval(this.interval);
         this.active = false;
+        this.endsAt = null;
         this.timeLeft = 0;
         this.update();
+        this.clearStoredState();
         this.modalTarget.classList.add('is-triggered');
         this.playFinishSound();
 
@@ -268,6 +280,93 @@ export default class extends Controller {
 
         this.displayTarget.textContent = formatted;
         this.miniDisplayTarget.textContent = formatted;
+    }
+
+    scheduleTick() {
+        window.clearInterval(this.interval);
+        this.tick();
+        this.interval = window.setInterval(() => this.tick(), 1000);
+    }
+
+    tick() {
+        if (!this.active || !this.endsAt) {
+            return;
+        }
+
+        this.timeLeft = Math.ceil((this.endsAt - Date.now()) / 1000);
+        this.update();
+
+        if (this.timeLeft <= 0) {
+            this.finish();
+        }
+    }
+
+    restoreState() {
+        const state = this.readStoredState();
+
+        if (!state?.endsAt) {
+            return false;
+        }
+
+        const remaining = Math.ceil((state.endsAt - Date.now()) / 1000);
+
+        if (remaining <= 0) {
+            this.clearStoredState();
+            return false;
+        }
+
+        this.totalTime = Number.parseInt(state.totalTime, 10) || remaining;
+        this.timeLeft = remaining;
+        this.endsAt = state.endsAt;
+        this.notified = Boolean(state.notified);
+        this.notificationContext = state.notificationContext || null;
+        this.active = true;
+        this.update();
+        this.show();
+
+        if (state.expanded) {
+            this.expand();
+        } else {
+            this.minify();
+        }
+
+        this.scheduleTick();
+
+        return true;
+    }
+
+    readStoredState() {
+        try {
+            return JSON.parse(window.sessionStorage.getItem(this.constructor.storageKey) || 'null');
+        } catch {
+            this.clearStoredState();
+            return null;
+        }
+    }
+
+    persistState() {
+        if (!this.active || !this.endsAt) {
+            this.clearStoredState();
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem(this.constructor.storageKey, JSON.stringify({
+                endsAt: this.endsAt,
+                totalTime: this.totalTime,
+                expanded: this.expanded,
+                notified: this.notified,
+                notificationContext: this.notificationContext,
+            }));
+        } catch {
+        }
+    }
+
+    clearStoredState() {
+        try {
+            window.sessionStorage.removeItem(this.constructor.storageKey);
+        } catch {
+        }
     }
 
     resizeCanvas() {

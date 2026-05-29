@@ -71,6 +71,7 @@ final class ActiveWorkoutViewService
                 'title' => $exercise->getName(),
                 'titleLines' => $this->splitTitle($exercise->getName()),
                 'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+                'restSeconds' => $currentSessionExercise->getRestSeconds(),
                 'targetLabel' => $this->targetLabel($currentSessionExercise->getTargetSets(), $currentSessionExercise->getTargetRepsMin(), $currentSessionExercise->getTargetRepsMax()),
                 'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3, $currentSessionExercise->getId()),
             ];
@@ -195,9 +196,15 @@ final class ActiveWorkoutViewService
                 'exerciseCount' => count($exercises),
                 'meta' => $this->programMeta($program->getEstimatedDurationMinutes(), count($exercises)),
                 'exercises' => array_map(fn ($programExercise): array => [
+                    'exerciseId' => $programExercise->getExercise()->getId(),
                     'name' => $programExercise->getExercise()->getName(),
                     'muscleGroup' => $programExercise->getExercise()->getMuscleGroup(),
                     'image' => $programExercise->getExercise()->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
+                    'targetSets' => $programExercise->getTargetSets(),
+                    'targetRepsMin' => $programExercise->getTargetRepsMin(),
+                    'targetRepsMax' => $programExercise->getTargetRepsMax(),
+                    'targetWeight' => $programExercise->getTargetWeight(),
+                    'restSeconds' => $programExercise->getRestSeconds(),
                     'target' => $this->programExerciseTarget($programExercise),
                 ], $exercises),
             ];
@@ -256,6 +263,7 @@ final class ActiveWorkoutViewService
             'title' => 'Aucune seance active',
             'titleLines' => ['Aucune seance', 'active'],
             'image' => 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+            'restSeconds' => 90,
             'targetLabel' => '3 x 8-10',
             'sets' => [
                 ['id' => null, 'sessionExerciseId' => null, 'number' => 1, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],

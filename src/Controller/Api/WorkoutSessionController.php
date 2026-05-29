@@ -87,6 +87,7 @@ final class WorkoutSessionController extends AbstractController
                 'muscleGroup' => $exercise->getMuscleGroup(),
                 'equipment' => $exercise->getEquipment(),
                 'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+                'restSeconds' => $sessionExercise->getRestSeconds(),
                 'sets' => $this->placeholderSets($sessionExercise),
                 'position' => $sessionExercise->getPosition(),
             ], JsonResponse::HTTP_CREATED);
@@ -109,6 +110,7 @@ final class WorkoutSessionController extends AbstractController
             'muscleGroup' => $exercise->getMuscleGroup(),
             'equipment' => $exercise->getEquipment(),
             'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
+            'restSeconds' => $sessionExercise->getRestSeconds(),
             'targetLabel' => $this->targetLabel($sessionExercise),
             'sets' => [] === $sets ? $this->placeholderSets($sessionExercise) : array_map(fn ($set): array => [
                 'id' => $set->getId(),

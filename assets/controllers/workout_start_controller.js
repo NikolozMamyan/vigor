@@ -78,6 +78,14 @@ export default class extends Controller {
             },
             bubbles: true,
         }));
-        window.history.pushState({ view: nextView }, '', `/app/${nextView}`);
+        this.replaceCurrentHistoryState(nextView);
+    }
+
+    replaceCurrentHistoryState(view) {
+        const currentState = window.history.state && typeof window.history.state === 'object'
+            ? window.history.state
+            : {};
+
+        window.history.replaceState({ ...currentState, view }, '', `/app/${view}`);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\UserProfile;
 use App\Entity\WorkoutProgram;
 use App\Repository\ExerciseRepository;
 use App\Repository\WorkoutProgramExerciseRepository;
@@ -50,9 +51,46 @@ final class WorkoutProgramController extends AbstractController
         }
     }
 
+    #[Route('/api/workout-programs/{id}', name: 'api_workout_programs_update', methods: ['PATCH'])]
+    public function update(
+        WorkoutProgram $program,
+        Request $request,
+        CurrentUserProfileProvider $currentUser,
+        ExerciseRepository $exerciseRepository,
+        WorkoutProgramService $programService,
+        WorkoutProgramExerciseRepository $programExerciseRepository,
+    ): JsonResponse {
+        try {
+            $profile = $currentUser->getProfile();
+
+            if (!$this->ownsProgram($program, $profile)) {
+                return $this->json(['error' => 'Program not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            $payload = json_decode($request->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+            $program = $programService->update(
+                $program,
+                (string) ($payload['name'] ?? $program->getName()),
+                $this->resolveExerciseConfigs($payload['exercises'] ?? [], $exerciseRepository),
+            );
+
+            return $this->json($this->normalizeProgram($program, $programExerciseRepository));
+        } catch (\InvalidArgumentException|\JsonException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
     #[Route('/api/workout-programs/{id}', name: 'api_workout_programs_delete', methods: ['DELETE'])]
-    public function delete(WorkoutProgram $program, WorkoutProgramService $programService): JsonResponse
+    public function delete(
+        WorkoutProgram $program,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutProgramService $programService,
+    ): JsonResponse
     {
+        if (!$this->ownsProgram($program, $currentUser->getProfile())) {
+            return $this->json(['error' => 'Program not found.'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
         $programService->delete($program);
 
         return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
@@ -60,9 +98,17 @@ final class WorkoutProgramController extends AbstractController
 
     #[Route('/api/workout-programs/{id}/start', name: 'api_workout_programs_start', methods: ['POST'])]
     #[Route('/api/workout-sessions/from-program/{id}', name: 'api_workout_sessions_start_from_program', methods: ['POST'])]
-    public function start(WorkoutProgram $program, WorkoutSessionService $sessionService): JsonResponse
+    public function start(
+        WorkoutProgram $program,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse
     {
         try {
+            if (!$this->ownsProgram($program, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Program not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $session = $sessionService->startProgram($program);
 
             return $this->json([
@@ -73,6 +119,22 @@ final class WorkoutProgramController extends AbstractController
         } catch (\InvalidArgumentException $exception) {
             return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    private function ownsProgram(WorkoutProgram $program, ?UserProfile $profile): bool
+    {
+        if (!$profile) {
+            return false;
+        }
+
+        $programProfileId = $program->getProfile()->getId();
+        $currentProfileId = $profile->getId();
+
+        if (null === $programProfileId || null === $currentProfileId) {
+            return $program->getProfile() === $profile;
+        }
+
+        return $programProfileId === $currentProfileId;
     }
 
     /**
@@ -91,9 +153,15 @@ final class WorkoutProgramController extends AbstractController
                 ? sprintf('%d min - %d exo%s', $program->getEstimatedDurationMinutes(), count($exercises), count($exercises) > 1 ? 's' : '')
                 : sprintf('%d exo%s', count($exercises), count($exercises) > 1 ? 's' : ''),
             'exercises' => array_map(fn ($programExercise): array => [
+                'exerciseId' => $programExercise->getExercise()->getId(),
                 'name' => $programExercise->getExercise()->getName(),
                 'muscleGroup' => $programExercise->getExercise()->getMuscleGroup(),
                 'image' => $programExercise->getExercise()->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
+                'targetSets' => $programExercise->getTargetSets(),
+                'targetRepsMin' => $programExercise->getTargetRepsMin(),
+                'targetRepsMax' => $programExercise->getTargetRepsMax(),
+                'targetWeight' => $programExercise->getTargetWeight(),
+                'restSeconds' => $programExercise->getRestSeconds(),
                 'target' => $this->programExerciseTarget($programExercise),
             ], $exercises),
         ];

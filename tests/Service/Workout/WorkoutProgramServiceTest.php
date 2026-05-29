@@ -8,6 +8,7 @@ use App\Entity\Exercise;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutProgram;
 use App\Entity\WorkoutProgramExercise;
+use App\Repository\WorkoutProgramExerciseReaderInterface;
 use App\Service\Workout\WorkoutProgramService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -25,7 +26,7 @@ final class WorkoutProgramServiceTest extends TestCase
             ));
         $entityManager->expects(self::once())->method('flush');
 
-        $program = (new WorkoutProgramService($entityManager))->create(
+        $program = $this->createService($entityManager)->create(
             new UserProfile(),
             $this->createExercise(),
             'Push maison',
@@ -42,7 +43,7 @@ final class WorkoutProgramServiceTest extends TestCase
         $entityManager->expects(self::exactly(3))->method('persist');
         $entityManager->expects(self::once())->method('flush');
 
-        $program = (new WorkoutProgramService($entityManager))->create(
+        $program = $this->createService($entityManager)->create(
             new UserProfile(),
             $this->createExercise(),
             'Full body',
@@ -82,7 +83,76 @@ final class WorkoutProgramServiceTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
 
-        (new WorkoutProgramService($entityManager))->create(new UserProfile(), $this->createExercise(), 'A');
+        $this->createService($entityManager)->create(new UserProfile(), $this->createExercise(), 'A');
+    }
+
+    public function testUpdateReplacesProgramExercises(): void
+    {
+        $program = new WorkoutProgram(new UserProfile());
+        $existingProgramExercise = new WorkoutProgramExercise($program, $this->createExercise());
+        $newExercise = (new Exercise())
+            ->setName('Squat')
+            ->setSlug('squat')
+            ->setMuscleGroup('Jambes')
+            ->setEquipment('Barre');
+
+        $programExerciseRepository = $this->createMock(WorkoutProgramExerciseReaderInterface::class);
+        $programExerciseRepository->expects(self::once())
+            ->method('findForProgram')
+            ->with($program)
+            ->willReturn([$existingProgramExercise]);
+
+        $persistedProgramExercise = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('remove')->with($existingProgramExercise);
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::callback(static function (object $entity) use (&$persistedProgramExercise): bool {
+                $persistedProgramExercise = $entity;
+
+                return $entity instanceof WorkoutProgramExercise;
+            }));
+        $entityManager->expects(self::once())->method('flush');
+
+        $updatedProgram = $this->createService($entityManager, $programExerciseRepository)->update(
+            $program,
+            'Leg day',
+            [[
+                'exercise' => $newExercise,
+                'targetSets' => 6,
+                'targetRepsMin' => 5,
+                'targetRepsMax' => 7,
+                'targetWeight' => 120.0,
+                'restSeconds' => 75,
+            ]],
+        );
+
+        self::assertSame($program, $updatedProgram);
+        self::assertSame('Leg day', $program->getName());
+        self::assertSame(24, $program->getEstimatedDurationMinutes());
+        self::assertInstanceOf(WorkoutProgramExercise::class, $persistedProgramExercise);
+        self::assertSame($program, $persistedProgramExercise->getProgram());
+        self::assertSame($newExercise, $persistedProgramExercise->getExercise());
+        self::assertSame(1, $persistedProgramExercise->getPosition());
+        self::assertSame(6, $persistedProgramExercise->getTargetSets());
+        self::assertSame(5, $persistedProgramExercise->getTargetRepsMin());
+        self::assertSame(7, $persistedProgramExercise->getTargetRepsMax());
+        self::assertSame(120.0, $persistedProgramExercise->getTargetWeight());
+        self::assertSame(75, $persistedProgramExercise->getRestSeconds());
+    }
+
+    public function testUpdateRejectsEmptyExerciseList(): void
+    {
+        $program = new WorkoutProgram(new UserProfile());
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('remove');
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->createService($entityManager)->update($program, 'Push maison', []);
     }
 
     public function testDeleteRemovesProgram(): void
@@ -93,7 +163,17 @@ final class WorkoutProgramServiceTest extends TestCase
         $entityManager->expects(self::once())->method('remove')->with($program);
         $entityManager->expects(self::once())->method('flush');
 
-        (new WorkoutProgramService($entityManager))->delete($program);
+        $this->createService($entityManager)->delete($program);
+    }
+
+    private function createService(
+        EntityManagerInterface $entityManager,
+        ?WorkoutProgramExerciseReaderInterface $programExerciseRepository = null,
+    ): WorkoutProgramService {
+        return new WorkoutProgramService(
+            $entityManager,
+            $programExerciseRepository ?? $this->createStub(WorkoutProgramExerciseReaderInterface::class),
+        );
     }
 
     private function createExercise(): Exercise

@@ -24,6 +24,8 @@ final class VigorAppControllerTest extends WebTestCase
         self::assertSelectorExists('input[name="email"]');
         self::assertSelectorExists('input[name="password"]');
         self::assertSelectorExists('form[action="/register"]');
+        self::assertSelectorExists('meta[name="turbo-cache-control"][content="no-cache"]');
+        self::assertNoStoreResponse($client->getResponse());
     }
 
     public function testWorkoutRouteRedirectsAnonymousUserToLogin(): void
@@ -56,6 +58,7 @@ final class VigorAppControllerTest extends WebTestCase
         $client->request('GET', '/app/profile');
 
         self::assertResponseRedirects('/login');
+        self::assertNoStoreResponse($client->getResponse());
     }
 
     public function testAdminExerciseRouteRedirectsAnonymousUserToLogin(): void
@@ -64,5 +67,15 @@ final class VigorAppControllerTest extends WebTestCase
         $client->request('GET', '/admin/exercises');
 
         self::assertResponseRedirects('/login');
+    }
+
+    private static function assertNoStoreResponse(\Symfony\Component\HttpFoundation\Response $response): void
+    {
+        self::assertTrue($response->headers->hasCacheControlDirective('private'));
+        self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
+        self::assertTrue($response->headers->hasCacheControlDirective('no-cache'));
+        self::assertTrue($response->headers->hasCacheControlDirective('must-revalidate'));
+        self::assertSame('no-cache', $response->headers->get('Pragma'));
+        self::assertSame('0', $response->headers->get('Expires'));
     }
 }

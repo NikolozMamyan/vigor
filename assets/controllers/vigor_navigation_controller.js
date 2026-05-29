@@ -20,7 +20,7 @@ export default class extends Controller {
         this.boundPointerMove = (event) => this.movePointerSwipe(event);
         this.boundPointerUp = (event) => this.endPointerSwipe(event);
         this.boundPointerCancel = () => this.cancelSwipe();
-        this.boundPopState = (event) => this.show(event.state?.view || this.viewFromPath() || 'home', false);
+        this.boundPopState = (event) => this.handlePopState(event);
         this.boundRefreshViews = (event) => this.refreshViews(event.detail || {});
         this.boundResizeViewport = () => this.syncViewportBottom();
 
@@ -39,6 +39,7 @@ export default class extends Controller {
 
         this.syncViewportBottom();
         this.show(this.activeValue || 'home', false);
+        this.replaceCurrentHistoryState(this.activeValue || 'home');
         window.setTimeout(() => this.animateRings(), 300);
     }
 
@@ -93,7 +94,7 @@ export default class extends Controller {
         });
 
         if (pushState) {
-            window.history.pushState({ view }, '', `/app/${view}`);
+            this.replaceCurrentHistoryState(view);
         }
 
         if (view !== previousView) {
@@ -412,6 +413,30 @@ export default class extends Controller {
         const match = window.location.pathname.match(/^\/app\/(home|workout|library|stats|records|profile)$/);
 
         return match ? match[1] : null;
+    }
+
+    handlePopState(event) {
+        const view = event.state?.view || this.viewFromPath() || this.activeValue || 'home';
+
+        if (!this.views.includes(view)) {
+            return;
+        }
+
+        this.show(view, false);
+        this.replaceCurrentHistoryState(view);
+        this.refreshViews({ views: [view], nextView: view, path: `/app/${view}` });
+    }
+
+    replaceCurrentHistoryState(view) {
+        if (!this.views.includes(view)) {
+            return;
+        }
+
+        const currentState = window.history.state && typeof window.history.state === 'object'
+            ? window.history.state
+            : {};
+
+        window.history.replaceState({ ...currentState, view }, '', `/app/${view}`);
     }
 
     moveIndicator(button, view) {
