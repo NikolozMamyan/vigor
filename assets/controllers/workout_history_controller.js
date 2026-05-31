@@ -11,6 +11,7 @@ export default class extends Controller {
         this.currentRow = null;
         this.currentSession = null;
         this.saveTimers = new Map();
+        this.historyDirty = false;
     }
 
     disconnect() {
@@ -48,11 +49,17 @@ export default class extends Controller {
     }
 
     close() {
+        const shouldRefreshWorkout = this.historyDirty;
         this.modalTarget.classList.add('opacity-0', 'pointer-events-none');
         this.modalTarget.classList.remove('opacity-100');
         document.body.classList.remove('overflow-hidden');
         this.bodyTarget.innerHTML = '';
         this.currentSession = null;
+
+        if (shouldRefreshWorkout) {
+            this.historyDirty = false;
+            this.refreshRelatedViews(['workout', 'home', 'stats', 'records']);
+        }
     }
 
     async deleteSession(event) {
@@ -71,9 +78,9 @@ export default class extends Controller {
         }
 
         this.currentRow?.remove();
+        this.markHistoryChanged();
         this.close();
         this.syncEmptyState();
-        this.refreshRelatedViews(['home', 'stats', 'records']);
     }
 
     scheduleSetSave(event) {
@@ -113,7 +120,7 @@ export default class extends Controller {
 
         row.classList.remove('border-rose-500/50');
         this.setSetState(row, 'Enregistre', 'saved');
-        this.refreshRelatedViews(['home', 'stats', 'records']);
+        this.markHistoryChanged();
     }
 
     async deleteSet(event) {
@@ -138,7 +145,7 @@ export default class extends Controller {
 
         row.remove();
         await this.reloadCurrentSession();
-        this.refreshRelatedViews(['home', 'stats', 'records']);
+        this.markHistoryChanged();
     }
 
     addSet(event) {
@@ -191,7 +198,7 @@ export default class extends Controller {
         }
 
         await this.reloadCurrentSession();
-        this.refreshRelatedViews(['home', 'stats', 'records']);
+        this.markHistoryChanged();
     }
 
     cancelNewSet(event) {
@@ -235,7 +242,7 @@ export default class extends Controller {
         }
 
         this.renderSession(session);
-        this.refreshRelatedViews(['home', 'stats', 'records']);
+        this.markHistoryChanged();
     }
 
     openModal() {
@@ -464,6 +471,11 @@ export default class extends Controller {
             },
             bubbles: true,
         }));
+    }
+
+    markHistoryChanged() {
+        this.historyDirty = true;
+        this.refreshRelatedViews(['home', 'stats', 'records']);
     }
 
     async reloadCurrentSession() {
