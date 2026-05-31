@@ -123,6 +123,23 @@ final class WorkoutSessionService
         return $sessionExercise;
     }
 
+    public function addHistoryExercise(WorkoutSession $session, Exercise $exercise): WorkoutSessionExercise
+    {
+        $this->assertCompletedHistorySession($session);
+
+        $sessionExercise = (new WorkoutSessionExercise($session, $exercise))
+            ->setPosition($this->sessionExerciseRepository?->nextPositionForSession($session) ?? 1)
+            ->setTargetSets(3)
+            ->setTargetRepsMin(8)
+            ->setTargetRepsMax(10)
+            ->setRestSeconds(90);
+
+        $this->entityManager->persist($sessionExercise);
+        $this->entityManager->flush();
+
+        return $sessionExercise;
+    }
+
     public function removeExercise(WorkoutSessionExercise $sessionExercise): void
     {
         $session = $sessionExercise->getSession();
@@ -148,10 +165,25 @@ final class WorkoutSessionService
         return $session;
     }
 
+    public function deleteHistorySession(WorkoutSession $session): void
+    {
+        $this->assertCompletedHistorySession($session);
+
+        $this->entityManager->remove($session);
+        $this->entityManager->flush();
+    }
+
     private function assertActive(WorkoutSession $session): void
     {
         if (WorkoutSession::STATUS_ACTIVE !== $session->getStatus()) {
             throw new \InvalidArgumentException('Only an active workout session can be changed.');
+        }
+    }
+
+    private function assertCompletedHistorySession(WorkoutSession $session): void
+    {
+        if (WorkoutSession::STATUS_COMPLETED !== $session->getStatus()) {
+            throw new \InvalidArgumentException('Only completed workout sessions can be edited from history.');
         }
     }
 }

@@ -38,6 +38,31 @@ final class WorkoutSetService
         return $set;
     }
 
+    public function createCompletedForHistory(WorkoutSessionExercise $sessionExercise, int $position, float $weight, int $reps): WorkoutSet
+    {
+        $this->assertValidSetData($weight, $reps);
+
+        $existingSet = $this->setRepository->findOneForSessionExerciseAtPosition($sessionExercise, $position);
+
+        if ($existingSet) {
+            return $this->update($existingSet, $weight, $reps);
+        }
+
+        $estimate = $this->oneRepMaxCalculator->estimate($weight, $reps);
+        $completedAt = $sessionExercise->getSession()->getCompletedAt() ?? new \DateTimeImmutable();
+        $set = (new WorkoutSet($sessionExercise))
+            ->setPosition($position)
+            ->setWeight($weight)
+            ->setReps($reps)
+            ->complete($completedAt, $estimate);
+
+        $this->entityManager->persist($set);
+        $this->personalRecordService->detectAfterCompletedSet($set, $estimate);
+        $this->entityManager->flush();
+
+        return $set;
+    }
+
     public function update(WorkoutSet $set, float $weight, int $reps): WorkoutSet
     {
         $this->assertValidSetData($weight, $reps);
@@ -47,7 +72,9 @@ final class WorkoutSetService
             ->setReps($reps);
 
         if ($set->getCompletedAt()) {
-            $set->complete($set->getCompletedAt(), $this->oneRepMaxCalculator->estimate($weight, $reps));
+            $estimate = $this->oneRepMaxCalculator->estimate($weight, $reps);
+            $set->complete($set->getCompletedAt(), $estimate);
+            $this->personalRecordService->syncAfterUpdatedSet($set, $estimate);
         }
 
         $this->entityManager->flush();

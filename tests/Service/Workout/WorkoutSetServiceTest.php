@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Workout;
 
 use App\Entity\Exercise;
+use App\Entity\PersonalRecord;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
@@ -73,6 +74,52 @@ final class WorkoutSetServiceTest extends TestCase
         self::assertSame(6, $result->getReps());
     }
 
+    public function testCreateCompletedForHistoryPersistsCompletedSet(): void
+    {
+        $sessionExercise = $this->createSessionExercise();
+        $completedAt = new \DateTimeImmutable('2026-05-26 11:00:00');
+        $sessionExercise->getSession()->complete($completedAt);
+
+        $setRepository = $this->createMock(WorkoutSetReaderInterface::class);
+        $setRepository->expects(self::once())
+            ->method('findOneForSessionExerciseAtPosition')
+            ->with($sessionExercise, 6)
+            ->willReturn(null);
+
+        $recordRepository = $this->createMock(PersonalRecordReaderInterface::class);
+        $recordRepository->expects(self::once())
+            ->method('findBest')
+            ->willReturn(null);
+
+        $persistedSet = null;
+        $persistedRecord = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(function (object $entity) use (&$persistedSet, &$persistedRecord): void {
+                if ($entity instanceof WorkoutSet) {
+                    $persistedSet = $entity;
+                }
+
+                if ($entity instanceof PersonalRecord) {
+                    $persistedRecord = $entity;
+                }
+            });
+        $entityManager->expects(self::once())->method('flush');
+
+        $result = $this->createService($entityManager, $setRepository, $recordRepository)
+            ->createCompletedForHistory($sessionExercise, 6, 120.0, 5);
+
+        self::assertSame($persistedSet, $result);
+        self::assertSame($sessionExercise, $result->getSessionExercise());
+        self::assertSame(6, $result->getPosition());
+        self::assertSame(120.0, $result->getWeight());
+        self::assertSame(5, $result->getReps());
+        self::assertSame($completedAt, $result->getCompletedAt());
+        self::assertSame(140.0, $result->getEstimatedOneRepMax());
+        self::assertInstanceOf(PersonalRecord::class, $persistedRecord);
+    }
+
     public function testDeleteRemovesSet(): void
     {
         $set = new WorkoutSet($this->createSessionExercise());
@@ -86,9 +133,73 @@ final class WorkoutSetServiceTest extends TestCase
         $service->delete($set);
     }
 
+    public function testUpdateCompletedSetUpdatesLinkedPersonalRecord(): void
+    {
+        $sessionExercise = $this->createSessionExercise();
+        $set = (new WorkoutSet($sessionExercise))
+            ->setWeight(100.0)
+            ->setReps(5)
+            ->complete(new \DateTimeImmutable('2026-05-26 10:30:00'), 116.67);
+        $record = (new PersonalRecord($sessionExercise->getSession()->getProfile(), $sessionExercise->getExercise(), $set, 116.67))
+            ->setPreviousValue(100.0);
+
+        $recordRepository = $this->createMock(PersonalRecordReaderInterface::class);
+        $recordRepository->expects(self::once())
+            ->method('findForWorkoutSet')
+            ->with($set, PersonalRecord::METRIC_ESTIMATED_1RM)
+            ->willReturn($record);
+        $recordRepository->expects(self::never())->method('findBest');
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('remove');
+        $entityManager->expects(self::once())->method('flush');
+
+        $this->createService(
+            $entityManager,
+            $this->createStub(WorkoutSetReaderInterface::class),
+            $recordRepository,
+        )->update($set, 120.0, 5);
+
+        self::assertSame(140.0, $set->getEstimatedOneRepMax());
+        self::assertSame(140.0, $record->getValue());
+    }
+
+    public function testUpdateCompletedSetRemovesLinkedPersonalRecordWhenItIsNoLongerARecord(): void
+    {
+        $sessionExercise = $this->createSessionExercise();
+        $set = (new WorkoutSet($sessionExercise))
+            ->setWeight(100.0)
+            ->setReps(5)
+            ->complete(new \DateTimeImmutable('2026-05-26 10:30:00'), 116.67);
+        $record = (new PersonalRecord($sessionExercise->getSession()->getProfile(), $sessionExercise->getExercise(), $set, 116.67))
+            ->setPreviousValue(130.0);
+
+        $recordRepository = $this->createMock(PersonalRecordReaderInterface::class);
+        $recordRepository->expects(self::once())
+            ->method('findForWorkoutSet')
+            ->with($set, PersonalRecord::METRIC_ESTIMATED_1RM)
+            ->willReturn($record);
+        $recordRepository->expects(self::never())->method('findBest');
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::once())->method('remove')->with($record);
+        $entityManager->expects(self::once())->method('flush');
+
+        $this->createService(
+            $entityManager,
+            $this->createStub(WorkoutSetReaderInterface::class),
+            $recordRepository,
+        )->update($set, 90.0, 5);
+
+        self::assertSame(105.0, $set->getEstimatedOneRepMax());
+    }
+
     private function createService(
         EntityManagerInterface $entityManager,
         WorkoutSetReaderInterface $setRepository,
+        ?PersonalRecordReaderInterface $recordRepository = null,
     ): WorkoutSetService {
         return new WorkoutSetService(
             $entityManager,
@@ -96,7 +207,7 @@ final class WorkoutSetServiceTest extends TestCase
             new OneRepMaxCalculator(),
             new PersonalRecordService(
                 $entityManager,
-                $this->createStub(PersonalRecordReaderInterface::class),
+                $recordRepository ?? $this->createStub(PersonalRecordReaderInterface::class),
                 new PersonalRecordDetector(),
             ),
         );

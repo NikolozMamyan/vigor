@@ -192,6 +192,79 @@ final class WorkoutSessionServiceTest extends TestCase
         )->removeExercise($sessionExercise);
     }
 
+    public function testAddHistoryExerciseAddsExerciseToCompletedSession(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+        $session->complete(new \DateTimeImmutable('2026-05-26 11:00:00'));
+        $exercise = $this->createExercise();
+
+        $sessionExerciseRepository = $this->createMock(WorkoutSessionExerciseReaderInterface::class);
+        $sessionExerciseRepository->expects(self::once())
+            ->method('nextPositionForSession')
+            ->with($session)
+            ->willReturn(3);
+
+        $persistedSessionExercise = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::callback(static function (object $entity) use (&$persistedSessionExercise): bool {
+                $persistedSessionExercise = $entity;
+
+                return $entity instanceof WorkoutSessionExercise;
+            }));
+        $entityManager->expects(self::once())->method('flush');
+
+        $result = $this->createService(
+            entityManager: $entityManager,
+            sessionExerciseRepository: $sessionExerciseRepository,
+        )->addHistoryExercise($session, $exercise);
+
+        self::assertSame($persistedSessionExercise, $result);
+        self::assertSame($session, $result->getSession());
+        self::assertSame($exercise, $result->getExercise());
+        self::assertSame(3, $result->getPosition());
+        self::assertSame(90, $result->getRestSeconds());
+    }
+
+    public function testAddHistoryExerciseRejectsActiveSession(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->createService($entityManager)->addHistoryExercise($session, $this->createExercise());
+    }
+
+    public function testDeleteHistorySessionRemovesCompletedSession(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+        $session->complete(new \DateTimeImmutable('2026-05-26 11:00:00'));
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('remove')->with($session);
+        $entityManager->expects(self::once())->method('flush');
+
+        $this->createService($entityManager)->deleteHistorySession($session);
+    }
+
+    public function testDeleteHistorySessionRejectsActiveSession(): void
+    {
+        $session = new WorkoutSession(new UserProfile());
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('remove');
+        $entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->createService($entityManager)->deleteHistorySession($session);
+    }
+
     private function createService(
         EntityManagerInterface $entityManager,
         ?WorkoutSessionReaderInterface $sessionRepository = null,

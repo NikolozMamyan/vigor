@@ -1,59 +1,84 @@
 {#
     templates/vigor_app/_partials/workout_set_row.html.twig
 
-    Ligne de série — réutilisée dans la vue workout active.
-    Supporte : swipe-to-delete, check complétion, sauvegarde auto.
+    Ligne de serie reutilisee dans la vue workout active.
+    Supporte : swipe-to-delete, check completion, sauvegarde auto.
 
     Variables attendues :
-      set.id, set.sessionExerciseId, set.number, set.completed, set.previous, set.weight, set.reps
+      set.id, set.sessionExerciseId, set.number, set.completed, set.previous, set.weight, set.reps, set.previousSet
 #}
 
-<div class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative {{ set.completed ? 'checked' }}"
-     data-controller="workout-set"
-     data-workout-set-id-value="{{ set.id ?? 0 }}"
-     data-workout-set-session-exercise-id-value="{{ set.sessionExerciseId ?? 0 }}"
-     data-workout-set-position-value="{{ set.number }}">
+{% set previousSet = set.previousSet|default({
+    hasData: false,
+    position: set.number,
+    label: 'Aucun repere',
+    volume: '0'
+}) %}
 
-    <button type="button"
-            class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Effacer la série {{ set.number }}"
-            data-action="workout-set#remove">
-        <i data-lucide="x" class="w-4 h-4"></i>
-    </button>
+<div class="space-y-1.5" data-workout-set-block>
+    <div class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative {{ set.completed ? 'checked' }}"
+         data-controller="workout-set"
+         data-workout-set-id-value="{{ set.id ?? 0 }}"
+         data-workout-set-session-exercise-id-value="{{ set.sessionExerciseId ?? 0 }}"
+         data-workout-set-position-value="{{ set.number }}">
 
-    <div class="flex items-center gap-4">
-        <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">
-            {{ set.number }}
-        </div>
-        <div class="flex flex-col">
-            <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: {{ set.previous }}</span>
-            <div class="flex items-baseline gap-1">
-                <input type="number"
-                       inputmode="decimal"
-                       value="{{ set.weight }}"
-                       placeholder="80"
-                       aria-label="Poids série {{ set.number }}"
-                       class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1"
-                       data-workout-set-target="weight"
-                       data-action="input->workout-set#scheduleSave change->workout-set#save">
-                <span class="text-app-muted font-medium text-sm mr-2">kg</span>
-                <span class="text-white/30 text-lg mx-1">x</span>
-                <input type="number"
-                       inputmode="numeric"
-                       value="{{ set.reps }}"
-                       placeholder="8"
-                       aria-label="Répétitions série {{ set.number }}"
-                       class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1"
-                       data-workout-set-target="reps"
-                       data-action="input->workout-set#scheduleSave change->workout-set#save">
-                <span class="text-app-muted font-medium text-sm">reps</span>
+        <button type="button"
+                class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+                aria-label="Effacer la serie {{ set.number }}"
+                data-action="workout-set#remove">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">
+                {{ set.number }}
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: {{ set.previous }}</span>
+                <div class="flex items-baseline gap-1">
+                    <input type="number"
+                           inputmode="decimal"
+                           value="{{ set.weight }}"
+                           placeholder="80"
+                           aria-label="Poids serie {{ set.number }}"
+                           class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1"
+                           data-workout-set-target="weight"
+                           data-action="input->workout-set#scheduleSave change->workout-set#save">
+                    <span class="text-app-muted font-medium text-sm mr-2">kg</span>
+                    <span class="text-white/30 text-lg mx-1">x</span>
+                    <input type="number"
+                           inputmode="numeric"
+                           value="{{ set.reps }}"
+                           placeholder="8"
+                           aria-label="Repetitions serie {{ set.number }}"
+                           class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1"
+                           data-workout-set-target="reps"
+                           data-action="input->workout-set#scheduleSave change->workout-set#save">
+                    <span class="text-app-muted font-medium text-sm">reps</span>
+                </div>
             </div>
         </div>
+
+        <button type="button"
+                class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden"
+                data-action="workout-set#complete">
+            <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
+        </button>
     </div>
 
-    <button type="button"
-            class="check-btn {{ set.completed ? 'checked' }} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden"
-            data-action="workout-set#complete">
-        <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
-    </button>
+    <div class="ml-5 rounded-2xl border {{ previousSet.hasData ? 'border-cyan-400/20 bg-cyan-400/10' : 'border-white/10 bg-white/[0.03]' }} px-3 py-2 flex items-center justify-between gap-3">
+        <span class="min-w-0 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl {{ previousSet.hasData ? 'bg-cyan-400/15 text-cyan-200' : 'bg-white/5 text-app-muted' }} flex items-center justify-center shrink-0">
+                <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-[9px] font-black uppercase tracking-widest {{ previousSet.hasData ? 'text-cyan-200' : 'text-app-muted' }}">Derniere fois serie {{ set.number }}</span>
+                <span class="block text-xs font-extrabold text-white truncate">{{ previousSet.label }}</span>
+            </span>
+        </span>
+        <span class="shrink-0 text-right">
+            <span class="block text-[10px] font-black {{ previousSet.hasData ? 'text-app-accent' : 'text-app-muted' }}">{{ previousSet.hasData ? previousSet.volume ~ 'kg' : 'Nouveau' }}</span>
+            <span class="block text-[8px] font-bold text-app-muted uppercase tracking-wider">volume</span>
+        </span>
+    </div>
 </div>

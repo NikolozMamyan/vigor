@@ -11,6 +11,7 @@ export default class extends Controller {
         this.refreshRequests = new Map();
         this.backgroundRefreshTimer = null;
         this.skeletonTimer = null;
+        this.navigationRevision = 0;
 
         this.boundTouchStart = (event) => this.startTouchSwipe(event);
         this.boundTouchMove = (event) => this.moveTouchSwipe(event);
@@ -69,7 +70,17 @@ export default class extends Controller {
     }
 
     show(view, pushState) {
+        if (!this.views.includes(view)) {
+            return;
+        }
+
         const previousView = this.activeValue;
+        const changed = view !== previousView;
+
+        if (changed) {
+            ++this.navigationRevision;
+        }
+
         this.activeValue = view;
 
         this.viewTargets.forEach((element) => {
@@ -97,7 +108,7 @@ export default class extends Controller {
             this.replaceCurrentHistoryState(view);
         }
 
-        if (view !== previousView) {
+        if (changed) {
             this.resetMainScroll();
         }
 
@@ -106,7 +117,7 @@ export default class extends Controller {
             bubbles: true,
         }));
 
-        if (pushState && view !== previousView) {
+        if (pushState && changed) {
             this.refreshViews({ views: [view], nextView: view, path: `/app/${view}`, background: true });
             this.queueBackgroundRefresh(this.views.filter((item) => item !== view));
         }
@@ -454,28 +465,55 @@ export default class extends Controller {
 
     animateRings() {
         if (this.hasOuterRingTarget) {
-            this.outerRingTarget.style.strokeDashoffset = '60';
+            this.animateRing(this.outerRingTarget);
         }
 
         if (this.hasInnerRingTarget) {
-            this.innerRingTarget.style.strokeDashoffset = '90';
+            this.animateRing(this.innerRingTarget);
         }
+    }
+
+    animateRing(ring) {
+        const progress = this.clampPercent(Number.parseFloat(ring.dataset.ringProgress || '0'));
+        const radius = Number.parseFloat(ring.getAttribute('r') || '0');
+        const currentDashArray = Number.parseFloat(ring.getAttribute('stroke-dasharray') || '');
+        const circumference = Number.isFinite(currentDashArray) && currentDashArray > 0
+            ? currentDashArray
+            : 2 * Math.PI * radius;
+
+        if (!Number.isFinite(circumference) || circumference <= 0) {
+            return;
+        }
+
+        ring.style.strokeDasharray = `${circumference}`;
+        ring.style.strokeDashoffset = `${circumference - (circumference * progress / 100)}`;
+    }
+
+    clampPercent(value) {
+        if (!Number.isFinite(value)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(100, value));
     }
 
     async refreshViews({ views = [], nextView = null, path = null, background = false } = {}) {
         const requestedViews = Array.isArray(views) && views.length > 0 ? views : [this.activeValue];
         const uniqueViews = [...new Set(requestedViews.filter((view) => this.views.includes(view)))];
         const targetView = nextView && this.views.includes(nextView) ? nextView : this.activeValue;
+        const requestRevision = this.navigationRevision;
 
         if (uniqueViews.length === 0) {
-            if (targetView) {
-                this.show(targetView, false);
+            const activeView = this.resolveRefreshTarget(targetView, requestRevision);
+
+            if (activeView) {
+                this.show(activeView, false);
             }
 
             return;
         }
 
-        const refreshKey = uniqueViews.sort().join(':');
+        const refreshKey = `${uniqueViews.slice().sort().join(':')}|${targetView}|${path || ''}`;
 
         if (this.refreshRequests.has(refreshKey)) {
             return this.refreshRequests.get(refreshKey);
@@ -496,6 +534,7 @@ export default class extends Controller {
 
             const html = await response.text();
             const documentFragment = new DOMParser().parseFromString(html, 'text/html');
+            const activeView = this.resolveRefreshTarget(targetView, requestRevision);
 
             uniqueViews.forEach((view) => {
                 const incoming = documentFragment.getElementById(`view-${view}`);
@@ -505,15 +544,17 @@ export default class extends Controller {
                     return;
                 }
 
-                incoming.classList.toggle('active', view === targetView);
+                incoming.classList.toggle('active', view === activeView);
                 current.replaceWith(incoming);
             });
 
-            this.show(targetView, false);
+            this.show(activeView, false);
 
             if (window.lucide) {
                 window.lucide.createIcons();
             }
+
+            window.requestAnimationFrame(() => this.animateRings());
         })();
 
         this.refreshRequests.set(refreshKey, request);
@@ -525,6 +566,16 @@ export default class extends Controller {
             this.setRefreshing(uniqueViews, false);
             this.setSkeleton(false);
         }
+    }
+
+    resolveRefreshTarget(targetView, requestRevision) {
+        const currentView = this.views.includes(this.activeValue) ? this.activeValue : targetView;
+
+        if (this.navigationRevision !== requestRevision && targetView !== currentView) {
+            return currentView;
+        }
+
+        return targetView;
     }
 
     setRefreshing(views, refreshing) {

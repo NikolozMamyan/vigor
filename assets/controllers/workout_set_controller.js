@@ -84,7 +84,8 @@ export default class extends Controller {
     async remove() {
         this.removed = true;
         window.clearTimeout(this.saveTimeout);
-        this.element.remove();
+        const block = this.element.closest('[data-workout-set-block]');
+        (block || this.element).remove();
 
         let setId = this.hasIdValue ? this.idValue : 0;
 
@@ -174,9 +175,9 @@ export default class extends Controller {
         const exerciseTitle = workoutView?.querySelector('[data-active-workout-target="headerSubtitle"]')?.textContent?.trim()
             || workoutView?.querySelector('[data-active-workout-target="headerTitle"]')?.textContent?.trim()
             || 'Seance en cours';
-        const nextSet = this.element.nextElementSibling?.matches('[data-controller~="workout-set"]')
-            ? this.element.nextElementSibling
-            : null;
+        const currentBlock = this.element.closest('[data-workout-set-block]');
+        const nextSet = currentBlock?.nextElementSibling?.querySelector('[data-controller~="workout-set"]')
+            || (this.element.nextElementSibling?.matches('[data-controller~="workout-set"]') ? this.element.nextElementSibling : null);
         const nextPosition = nextSet?.dataset.workoutSetPositionValue;
         const nextLabel = nextPosition ? `Prochain set : serie ${nextPosition}` : 'Passe a la suite de ta seance';
 

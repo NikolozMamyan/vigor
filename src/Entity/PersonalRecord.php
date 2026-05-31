@@ -88,6 +88,13 @@ class PersonalRecord
         return (float) $this->value;
     }
 
+    public function setValue(float $value): self
+    {
+        $this->value = number_format($value, 2, '.', '');
+
+        return $this;
+    }
+
     public function getPreviousValue(): ?float
     {
         return null === $this->previousValue ? null : (float) $this->previousValue;

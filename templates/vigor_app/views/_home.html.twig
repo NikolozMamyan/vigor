@@ -1,4 +1,11 @@
 <section id="view-home" class="tab-content {{ activeView == 'home' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="home" data-controller="workout-start">
+    {% set activityTargetMinutes = dashboard.activity.targetMinutes|default(60) %}
+    {% set activityTargetKcal = dashboard.activity.targetKcal|default(activityTargetMinutes * 9) %}
+    {% set activityKcalPercentRaw = activityTargetKcal > 0 ? ((dashboard.activity.kcal|default(0) / activityTargetKcal) * 100)|round : 0 %}
+    {% set activityMinutesPercentRaw = activityTargetMinutes > 0 ? ((dashboard.activity.minutes|default(0) / activityTargetMinutes) * 100)|round : 0 %}
+    {% set activityKcalPercent = activityKcalPercentRaw > 100 ? 100 : activityKcalPercentRaw %}
+    {% set activityMinutesPercent = activityMinutesPercentRaw > 100 ? 100 : activityMinutesPercentRaw %}
+
     <div class="pt-2">
         <p class="text-app-muted text-xs font-semibold uppercase tracking-widest mb-1">{{ dashboard.dateLabel }}</p>
         <h1 class="text-4xl font-extrabold tracking-tight">Pret a briser <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-app-accent to-emerald-400">tes limites ?</span></h1>
@@ -15,11 +22,11 @@
             <p class="text-xs text-app-muted">{{ dashboard.activity.minutes }}/{{ dashboard.activity.targetMinutes }} min d'entrainement</p>
         </div>
         <div class="relative w-24 h-24 z-10">
-            <svg class="w-full h-full" viewBox="0 0 100 100">
+            <svg class="w-full h-full" viewBox="0 0 100 100" aria-hidden="true">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
                 <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
-                <circle data-vigor-navigation-target="outerRing" class="progress-ring__circle text-app-accent" stroke-dasharray="251.2" stroke-dashoffset="251.2" cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"></circle>
-                <circle data-vigor-navigation-target="innerRing" class="progress-ring__circle text-app-accent2" stroke-dasharray="175.9" stroke-dashoffset="175.9" cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"></circle>
+                <circle data-vigor-navigation-target="outerRing" data-ring-progress="{{ activityKcalPercent }}" class="progress-ring__circle text-app-accent" stroke-dasharray="251.2" stroke-dashoffset="251.2" cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"></circle>
+                <circle data-vigor-navigation-target="innerRing" data-ring-progress="{{ activityMinutesPercent }}" class="progress-ring__circle text-app-accent2" stroke-dasharray="175.9" stroke-dashoffset="175.9" cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"></circle>
             </svg>
             <i data-lucide="flame" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-white"></i>
         </div>

@@ -2,11 +2,14 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
 use App\Repository\ExerciseRepository;
+use App\Repository\WorkoutSessionExerciseRepository;
 use App\Repository\WorkoutSetRepository;
 use App\Service\Auth\CurrentUserProfileProvider;
+use App\Service\Workout\PreviousExercisePerformanceService;
 use App\Service\Workout\WorkoutSessionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -38,10 +41,51 @@ final class WorkoutSessionController extends AbstractController
         return $this->json($this->normalizeSession($session), JsonResponse::HTTP_CREATED);
     }
 
+    #[Route('/api/workout-sessions/{id}', name: 'api_workout_sessions_show', methods: ['GET'])]
+    public function show(
+        WorkoutSession $session,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionExerciseRepository $sessionExerciseRepository,
+        WorkoutSetRepository $setRepository,
+    ): JsonResponse {
+        if (!$this->ownsSession($session, $currentUser->getProfile())) {
+            return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($this->normalizeSessionDetail($session, $sessionExerciseRepository, $setRepository));
+    }
+
+    #[Route('/api/workout-sessions/{id}', name: 'api_workout_sessions_delete', methods: ['DELETE'])]
+    public function deleteHistory(
+        WorkoutSession $session,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse {
+        try {
+            if (!$this->ownsSession($session, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            $sessionService->deleteHistorySession($session);
+
+            return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
     #[Route('/api/workout-sessions/{id}/complete', name: 'api_workout_sessions_complete', methods: ['POST'])]
-    public function complete(WorkoutSession $session, WorkoutSessionService $sessionService): JsonResponse
+    public function complete(
+        WorkoutSession $session,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse
     {
         try {
+            if (!$this->ownsSession($session, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $session = $sessionService->complete($session);
 
             return $this->json($this->normalizeSession($session));
@@ -51,9 +95,17 @@ final class WorkoutSessionController extends AbstractController
     }
 
     #[Route('/api/workout-sessions/{id}/cancel', name: 'api_workout_sessions_cancel', methods: ['POST'])]
-    public function cancel(WorkoutSession $session, WorkoutSessionService $sessionService): JsonResponse
+    public function cancel(
+        WorkoutSession $session,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse
     {
         try {
+            if (!$this->ownsSession($session, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $session = $sessionService->cancel($session);
 
             return $this->json($this->normalizeSession($session));
@@ -66,10 +118,18 @@ final class WorkoutSessionController extends AbstractController
     public function addExercise(
         WorkoutSession $session,
         Request $request,
+        CurrentUserProfileProvider $currentUser,
         ExerciseRepository $exerciseRepository,
         WorkoutSessionService $sessionService,
+        PreviousExercisePerformanceService $previousPerformanceService,
     ): JsonResponse {
         try {
+            $profile = $currentUser->getProfile();
+
+            if (!$this->ownsSession($session, $profile)) {
+                return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $payload = json_decode($request->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
             $exercise = $exerciseRepository->find((int) ($payload['exerciseId'] ?? 0));
 
@@ -78,6 +138,8 @@ final class WorkoutSessionController extends AbstractController
             }
 
             $sessionExercise = $sessionService->addExercise($session, $exercise);
+            $previousPerformance = $previousPerformanceService->forSessionExercise($profile, $sessionExercise);
+            $previousSetByPosition = $this->previousSetByPosition($previousPerformance);
 
             return $this->json([
                 'id' => $sessionExercise->getId(),
@@ -88,7 +150,8 @@ final class WorkoutSessionController extends AbstractController
                 'equipment' => $exercise->getEquipment(),
                 'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
                 'restSeconds' => $sessionExercise->getRestSeconds(),
-                'sets' => $this->placeholderSets($sessionExercise),
+                'previousPerformance' => $previousPerformance,
+                'sets' => $this->placeholderSets($sessionExercise, $previousSetByPosition),
                 'position' => $sessionExercise->getPosition(),
             ], JsonResponse::HTTP_CREATED);
         } catch (\InvalidArgumentException|\JsonException $exception) {
@@ -96,11 +159,54 @@ final class WorkoutSessionController extends AbstractController
         }
     }
 
+    #[Route('/api/workout-sessions/{id}/history-exercises', name: 'api_workout_sessions_add_history_exercise', methods: ['POST'])]
+    public function addHistoryExercise(
+        WorkoutSession $session,
+        Request $request,
+        CurrentUserProfileProvider $currentUser,
+        ExerciseRepository $exerciseRepository,
+        WorkoutSessionService $sessionService,
+        WorkoutSessionExerciseRepository $sessionExerciseRepository,
+        WorkoutSetRepository $setRepository,
+    ): JsonResponse {
+        try {
+            if (!$this->ownsSession($session, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Workout session not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            $payload = json_decode($request->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+            $exercise = $exerciseRepository->find((int) ($payload['exerciseId'] ?? 0));
+
+            if (!$exercise) {
+                return $this->json(['error' => 'Exercise not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            $sessionService->addHistoryExercise($session, $exercise);
+
+            return $this->json($this->normalizeSessionDetail($session, $sessionExerciseRepository, $setRepository), JsonResponse::HTTP_CREATED);
+        } catch (\InvalidArgumentException|\JsonException $exception) {
+            return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
     #[Route('/api/workout-session-exercises/{id}', name: 'api_workout_session_exercises_show', methods: ['GET'])]
-    public function showSessionExercise(WorkoutSessionExercise $sessionExercise, WorkoutSetRepository $setRepository): JsonResponse
+    public function showSessionExercise(
+        WorkoutSessionExercise $sessionExercise,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSetRepository $setRepository,
+        PreviousExercisePerformanceService $previousPerformanceService,
+    ): JsonResponse
     {
+        $profile = $currentUser->getProfile();
+
+        if (!$this->ownsSessionExercise($sessionExercise, $profile)) {
+            return $this->json(['error' => 'Session exercise not found.'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
         $exercise = $sessionExercise->getExercise();
         $sets = $setRepository->findForSessionExercise($sessionExercise);
+        $previousPerformance = $previousPerformanceService->forSessionExercise($profile, $sessionExercise);
+        $previousSetByPosition = $this->previousSetByPosition($previousPerformance);
 
         return $this->json([
             'id' => $sessionExercise->getId(),
@@ -112,7 +218,8 @@ final class WorkoutSessionController extends AbstractController
             'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
             'restSeconds' => $sessionExercise->getRestSeconds(),
             'targetLabel' => $this->targetLabel($sessionExercise),
-            'sets' => [] === $sets ? $this->placeholderSets($sessionExercise) : array_map(fn ($set): array => [
+            'previousPerformance' => $previousPerformance,
+            'sets' => [] === $sets ? $this->placeholderSets($sessionExercise, $previousSetByPosition) : array_map(fn ($set): array => [
                 'id' => $set->getId(),
                 'sessionExerciseId' => $sessionExercise->getId(),
                 'number' => $set->getPosition(),
@@ -120,14 +227,23 @@ final class WorkoutSessionController extends AbstractController
                 'weight' => $set->getWeight() > 0 ? $set->getWeight() : null,
                 'reps' => $set->getReps() > 0 ? $set->getReps() : null,
                 'completed' => null !== $set->getCompletedAt(),
+                'previousSet' => $previousSetByPosition[$set->getPosition()] ?? $this->emptyPreviousSet($set->getPosition()),
             ], $sets),
         ]);
     }
 
     #[Route('/api/workout-session-exercises/{id}', name: 'api_workout_session_exercises_delete', methods: ['DELETE'])]
-    public function deleteSessionExercise(WorkoutSessionExercise $sessionExercise, WorkoutSessionService $sessionService): JsonResponse
+    public function deleteSessionExercise(
+        WorkoutSessionExercise $sessionExercise,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSessionService $sessionService,
+    ): JsonResponse
     {
         try {
+            if (!$this->ownsSessionExercise($sessionExercise, $currentUser->getProfile())) {
+                return $this->json(['error' => 'Session exercise not found.'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
             $sessionService->removeExercise($sessionExercise);
 
             return $this->json(null, JsonResponse::HTTP_NO_CONTENT);
@@ -150,9 +266,66 @@ final class WorkoutSessionController extends AbstractController
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function normalizeSessionDetail(
+        WorkoutSession $session,
+        WorkoutSessionExerciseRepository $sessionExerciseRepository,
+        WorkoutSetRepository $setRepository,
+    ): array {
+        $sessionExercises = $sessionExerciseRepository->findForSession($session);
+        $totalSets = 0;
+        $totalVolume = 0.0;
+        $exercises = [];
+
+        foreach ($sessionExercises as $sessionExercise) {
+            $sets = $setRepository->findForSessionExercise($sessionExercise);
+            $totalSets += count($sets);
+
+            foreach ($sets as $set) {
+                $totalVolume += $set->getVolume();
+            }
+
+            $exercise = $sessionExercise->getExercise();
+            $exercises[] = [
+                'id' => $sessionExercise->getId(),
+                'exerciseId' => $exercise->getId(),
+                'name' => $exercise->getName(),
+                'muscleGroup' => $exercise->getMuscleGroup(),
+                'image' => $exercise->getImageUrl() ?? 'https://placehold.co/160x160/18181b/ccff00?text=VIGOR',
+                'targetLabel' => $this->targetLabel($sessionExercise),
+                'sets' => array_map(fn ($set): array => [
+                    'id' => $set->getId(),
+                    'position' => $set->getPosition(),
+                    'weight' => $set->getWeight(),
+                    'reps' => $set->getReps(),
+                    'completed' => null !== $set->getCompletedAt(),
+                    'estimatedOneRepMax' => $set->getEstimatedOneRepMax(),
+                ], $sets),
+            ];
+        }
+
+        return [
+            'id' => $session->getId(),
+            'name' => $session->getName(),
+            'type' => $session->getType(),
+            'status' => $session->getStatus(),
+            'completedAt' => $session->getCompletedAt()?->format(\DateTimeInterface::ATOM),
+            'dateLabel' => ($session->getCompletedAt() ?? $session->getStartedAt())->format('d/m/Y'),
+            'timeLabel' => ($session->getCompletedAt() ?? $session->getStartedAt())->format('H:i'),
+            'durationLabel' => $this->durationLabel($session->getDurationSeconds()),
+            'exerciseCount' => count($sessionExercises),
+            'setCount' => $totalSets,
+            'volume' => $totalVolume,
+            'volumeLabel' => $this->formatNumber($totalVolume).' kg',
+            'exercises' => $exercises,
+        ];
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
-    private function placeholderSets(WorkoutSessionExercise $sessionExercise): array
+    private function placeholderSets(WorkoutSessionExercise $sessionExercise, array $previousSetByPosition = []): array
     {
         $sets = [];
 
@@ -165,10 +338,46 @@ final class WorkoutSessionController extends AbstractController
                 'weight' => null,
                 'reps' => null,
                 'completed' => false,
+                'previousSet' => $previousSetByPosition[$position] ?? $this->emptyPreviousSet($position),
             ];
         }
 
         return $sets;
+    }
+
+    /**
+     * @param array<string, mixed> $previousPerformance
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function previousSetByPosition(array $previousPerformance): array
+    {
+        $previousSetByPosition = [];
+
+        foreach ($previousPerformance['sets'] ?? [] as $set) {
+            $position = (int) ($set['position'] ?? 0);
+
+            if ($position <= 0) {
+                continue;
+            }
+
+            $previousSetByPosition[$position] = $set + ['hasData' => true];
+        }
+
+        return $previousSetByPosition;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyPreviousSet(int $position): array
+    {
+        return [
+            'hasData' => false,
+            'position' => $position,
+            'label' => 'Aucun repere',
+            'volume' => '0',
+        ];
     }
 
     private function targetLabel(WorkoutSessionExercise $sessionExercise): string
@@ -182,5 +391,48 @@ final class WorkoutSessionController extends AbstractController
         }
 
         return $min ? sprintf('%d x %d', $sets, $min) : sprintf('%d series', $sets);
+    }
+
+    private function ownsSessionExercise(WorkoutSessionExercise $sessionExercise, ?UserProfile $profile): bool
+    {
+        return $this->ownsSession($sessionExercise->getSession(), $profile);
+    }
+
+    private function ownsSession(WorkoutSession $session, ?UserProfile $profile): bool
+    {
+        if (!$profile) {
+            return false;
+        }
+
+        $sessionProfileId = $session->getProfile()->getId();
+        $currentProfileId = $profile->getId();
+
+        if (null === $sessionProfileId || null === $currentProfileId) {
+            return $session->getProfile() === $profile;
+        }
+
+        return $sessionProfileId === $currentProfileId;
+    }
+
+    private function durationLabel(?int $seconds): string
+    {
+        if (!$seconds || $seconds <= 0) {
+            return '0 min';
+        }
+
+        $minutes = (int) ceil($seconds / 60);
+
+        if ($minutes < 60) {
+            return sprintf('%d min', $minutes);
+        }
+
+        return sprintf('%dh%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+
+    private function formatNumber(float $value): string
+    {
+        $rounded = round($value, 1);
+
+        return 0.0 === fmod($rounded, 1.0) ? (string) (int) $rounded : number_format($rounded, 1, '.', '');
     }
 }

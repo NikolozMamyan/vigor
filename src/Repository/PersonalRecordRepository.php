@@ -6,6 +6,7 @@ use App\Entity\Exercise;
 use App\Entity\PersonalRecord;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
+use App\Entity\WorkoutSet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -34,6 +35,14 @@ final class PersonalRecordRepository extends ServiceEntityRepository implements 
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    public function findForWorkoutSet(WorkoutSet $set, string $metric): ?PersonalRecord
+    {
+        return $this->findOneBy([
+            'workoutSet' => $set,
+            'metric' => $metric,
+        ]);
     }
 
     /**

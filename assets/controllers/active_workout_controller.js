@@ -12,6 +12,8 @@ export default class extends Controller {
     connect() {
         this.progressObserver = null;
         this.progressFrame = null;
+        this.previousSetByPosition = new Map();
+        this.syncPreviousPerformanceMap(this.previousPerformancePayload());
         this.renderExerciseOptions();
         this.observeProgress();
         this.updateProgress();
@@ -25,7 +27,7 @@ export default class extends Controller {
 
     addSet() {
         const nextPosition = this.nextPosition();
-        this.setsTarget.insertAdjacentHTML('beforeend', this.template(nextPosition));
+        this.setsTarget.insertAdjacentHTML('beforeend', this.template(nextPosition, this.previousSetForPosition(nextPosition)));
 
         const addedRow = this.setsTarget.lastElementChild;
         addedRow?.querySelector('input')?.focus();
@@ -45,34 +47,37 @@ export default class extends Controller {
         return positions.length > 0 ? Math.max(...positions) + 1 : 1;
     }
 
-    template(position) {
+    template(position, previousSet = null) {
         return `
-            <div
-                class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative"
-                data-controller="workout-set"
-                data-workout-set-id-value="0"
-                data-workout-set-session-exercise-id-value="${this.sessionExerciseIdValue}"
-                data-workout-set-position-value="${position}"
-            >
-                <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie ${position}" data-action="workout-set#remove">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-                <div class="flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">${position}</div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: A completer</span>
-                        <div class="flex items-baseline gap-1">
-                            <input type="number" inputmode="decimal" placeholder="80" aria-label="Poids serie ${position}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                            <span class="text-app-muted font-medium text-sm mr-2">kg</span>
-                            <span class="text-white/30 text-lg mx-1">x</span>
-                            <input type="number" inputmode="numeric" placeholder="8" aria-label="Repetitions serie ${position}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                            <span class="text-app-muted font-medium text-sm">reps</span>
+            <div class="space-y-1.5" data-workout-set-block>
+                <div
+                    class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative"
+                    data-controller="workout-set"
+                    data-workout-set-id-value="0"
+                    data-workout-set-session-exercise-id-value="${this.sessionExerciseIdValue}"
+                    data-workout-set-position-value="${position}"
+                >
+                    <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie ${position}" data-action="workout-set#remove">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">${position}</div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: A completer</span>
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" inputmode="decimal" placeholder="80" aria-label="Poids serie ${position}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm mr-2">kg</span>
+                                <span class="text-white/30 text-lg mx-1">x</span>
+                                <input type="number" inputmode="numeric" placeholder="8" aria-label="Repetitions serie ${position}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm">reps</span>
+                            </div>
                         </div>
                     </div>
+                    <button type="button" class="check-btn w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
+                        <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
+                    </button>
                 </div>
-                <button type="button" class="check-btn w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
-                    <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
-                </button>
+                ${this.previousSetMiniCard(position, previousSet)}
             </div>
         `;
     }
@@ -263,6 +268,8 @@ export default class extends Controller {
         this.headerTitleTarget.textContent = 'Seance libre';
         this.headerSubtitleTarget.textContent = `${sessionExercise.exerciseName} - ${sessionExercise.muscleGroup}`;
         this.targetLabelTarget.textContent = sessionExercise.targetLabel || '3 x 8-10';
+        this.element.dataset.activeWorkoutPreviousPerformanceValue = JSON.stringify(sessionExercise.previousPerformance || null);
+        this.syncPreviousPerformanceMap(sessionExercise.previousPerformance);
         this.renderSets(sessionExercise.sets || []);
         this.markActivePill(sessionExercise.id);
         this.updateProgress();
@@ -279,33 +286,119 @@ export default class extends Controller {
     }
 
     setTemplate(set) {
+        const position = Number.parseInt(set.number, 10) || 1;
+
         return `
-            <div
-                class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative ${set.completed ? 'checked' : ''}"
-                data-controller="workout-set"
-                data-workout-set-id-value="${set.id || 0}"
-                data-workout-set-session-exercise-id-value="${set.sessionExerciseId || this.sessionExerciseIdValue}"
-                data-workout-set-position-value="${set.number}"
-            >
-                <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie ${set.number}" data-action="workout-set#remove">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-                <div class="flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">${set.number}</div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: ${this.escapeHtml(set.previous || 'A completer')}</span>
-                        <div class="flex items-baseline gap-1">
-                            <input type="number" inputmode="decimal" value="${set.weight ?? ''}" placeholder="80" aria-label="Poids serie ${set.number}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                            <span class="text-app-muted font-medium text-sm mr-2">kg</span>
-                            <span class="text-white/30 text-lg mx-1">x</span>
-                            <input type="number" inputmode="numeric" value="${set.reps ?? ''}" placeholder="8" aria-label="Repetitions serie ${set.number}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
-                            <span class="text-app-muted font-medium text-sm">reps</span>
+            <div class="space-y-1.5" data-workout-set-block>
+                <div
+                    class="set-row glass-panel rounded-2xl p-4 pr-10 flex items-center justify-between group relative ${set.completed ? 'checked' : ''}"
+                    data-controller="workout-set"
+                    data-workout-set-id-value="${set.id || 0}"
+                    data-workout-set-session-exercise-id-value="${set.sessionExerciseId || this.sessionExerciseIdValue}"
+                    data-workout-set-position-value="${position}"
+                >
+                    <button type="button" class="absolute top-2 right-2 w-7 h-7 rounded-full text-app-muted/70 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label="Effacer la serie ${position}" data-action="workout-set#remove">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-app-muted group-hover:text-white transition-colors">${position}</div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-app-muted uppercase font-semibold mb-1">PRC: ${this.escapeHtml(set.previous || 'A completer')}</span>
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" inputmode="decimal" value="${set.weight ?? ''}" placeholder="80" aria-label="Poids serie ${position}" class="data-input w-14 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="weight" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm mr-2">kg</span>
+                                <span class="text-white/30 text-lg mx-1">x</span>
+                                <input type="number" inputmode="numeric" value="${set.reps ?? ''}" placeholder="8" aria-label="Repetitions serie ${position}" class="data-input w-12 text-2xl font-extrabold text-white text-center pb-1" data-workout-set-target="reps" data-action="input->workout-set#scheduleSave change->workout-set#save">
+                                <span class="text-app-muted font-medium text-sm">reps</span>
+                            </div>
                         </div>
                     </div>
+                    <button type="button" class="check-btn ${set.completed ? 'checked' : ''} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
+                        <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
+                    </button>
                 </div>
-                <button type="button" class="check-btn ${set.completed ? 'checked' : ''} w-12 h-12 rounded-2xl border-2 border-white/10 bg-white/5 flex items-center justify-center relative overflow-hidden" data-action="workout-set#complete">
-                    <i data-lucide="check" class="check-icon w-6 h-6 text-transparent relative z-10 transition-colors duration-300"></i>
-                </button>
+                ${this.previousSetMiniCard(position, set.previousSet || this.previousSetForPosition(position))}
+            </div>
+        `;
+    }
+
+    syncPreviousPerformanceMap(performance = null) {
+        this.previousSetByPosition = new Map();
+
+        if (!performance || !Array.isArray(performance.sets)) {
+            return;
+        }
+
+        performance.sets.forEach((set) => {
+            const position = Number.parseInt(set.position, 10);
+
+            if (!Number.isFinite(position) || position <= 0) {
+                return;
+            }
+
+            this.previousSetByPosition.set(position, {
+                ...set,
+                hasData: set.hasData !== false,
+                position,
+                label: set.label || 'Aucun repere',
+                volume: set.volume ?? '0',
+            });
+        });
+    }
+
+    previousPerformancePayload() {
+        const raw = this.element.dataset.activeWorkoutPreviousPerformanceValue;
+
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+
+            return parsed && !Array.isArray(parsed) && typeof parsed === 'object' ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    previousSetForPosition(position) {
+        return this.previousSetByPosition?.get(position) || this.emptyPreviousSet(position);
+    }
+
+    emptyPreviousSet(position) {
+        return {
+            hasData: false,
+            position,
+            label: 'Aucun repere',
+            volume: '0',
+        };
+    }
+
+    previousSetMiniCard(position, previousSet = null) {
+        const data = previousSet && typeof previousSet === 'object' ? previousSet : this.emptyPreviousSet(position);
+        const hasData = Boolean(data.hasData);
+        const cardClass = hasData ? 'border-cyan-400/20 bg-cyan-400/10' : 'border-white/10 bg-white/[0.03]';
+        const iconClass = hasData ? 'bg-cyan-400/15 text-cyan-200' : 'bg-white/5 text-app-muted';
+        const titleClass = hasData ? 'text-cyan-200' : 'text-app-muted';
+        const volumeClass = hasData ? 'text-app-accent' : 'text-app-muted';
+        const volume = data.volume ?? '0';
+
+        return `
+            <div class="ml-5 rounded-2xl border ${cardClass} px-3 py-2 flex items-center justify-between gap-3">
+                <span class="min-w-0 flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-xl ${iconClass} flex items-center justify-center shrink-0">
+                        <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block text-[9px] font-black uppercase tracking-widest ${titleClass}">Derniere fois serie ${position}</span>
+                        <span class="block text-xs font-extrabold text-white truncate">${this.escapeHtml(data.label || 'Aucun repere')}</span>
+                    </span>
+                </span>
+                <span class="shrink-0 text-right">
+                    <span class="block text-[10px] font-black ${volumeClass}">${hasData ? `${this.escapeHtml(volume)}kg` : 'Nouveau'}</span>
+                    <span class="block text-[8px] font-bold text-app-muted uppercase tracking-wider">volume</span>
+                </span>
             </div>
         `;
     }

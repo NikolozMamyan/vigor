@@ -19,6 +19,7 @@ final class ActiveWorkoutViewService
         private readonly WorkoutSetRepository $setRepository,
         private readonly WorkoutProgramRepository $programRepository,
         private readonly WorkoutProgramExerciseRepository $programExerciseRepository,
+        private readonly PreviousExercisePerformanceService $previousPerformanceService,
     ) {
     }
 
@@ -49,6 +50,8 @@ final class ActiveWorkoutViewService
 
             $exercise = $currentSessionExercise->getExercise();
             $sets = $this->setRepository->findForSessionExercise($currentSessionExercise);
+            $previousPerformance = $this->previousPerformanceService->forSessionExercise($profile, $currentSessionExercise);
+            $previousSetByPosition = $this->previousSetByPosition($previousPerformance);
 
             return [
                 'hasActiveSession' => true,
@@ -73,7 +76,8 @@ final class ActiveWorkoutViewService
                 'image' => $exercise->getImageUrl() ?? 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
                 'restSeconds' => $currentSessionExercise->getRestSeconds(),
                 'targetLabel' => $this->targetLabel($currentSessionExercise->getTargetSets(), $currentSessionExercise->getTargetRepsMin(), $currentSessionExercise->getTargetRepsMax()),
-                'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3, $currentSessionExercise->getId()),
+                'previousPerformance' => $previousPerformance,
+                'sets' => $this->normalizeSets($sets, $currentSessionExercise->getTargetSets() ?? 3, $currentSessionExercise->getId(), $previousSetByPosition),
             ];
         } catch (\Throwable) {
             return $this->emptyState();
@@ -85,7 +89,7 @@ final class ActiveWorkoutViewService
      *
      * @return list<array<string, mixed>>
      */
-    private function normalizeSets(array $sets, int $targetSets, ?int $sessionExerciseId): array
+    private function normalizeSets(array $sets, int $targetSets, ?int $sessionExerciseId, array $previousSetByPosition = []): array
     {
         $normalized = [];
 
@@ -98,6 +102,7 @@ final class ActiveWorkoutViewService
                 'weight' => 0.0 === $set->getWeight() ? null : $this->formatNumber($set->getWeight()),
                 'reps' => 0 === $set->getReps() ? null : $set->getReps(),
                 'completed' => null !== $set->getCompletedAt(),
+                'previousSet' => $previousSetByPosition[$set->getPosition()] ?? $this->emptyPreviousSet($set->getPosition()),
             ];
         }
 
@@ -110,10 +115,46 @@ final class ActiveWorkoutViewService
                 'weight' => null,
                 'reps' => null,
                 'completed' => false,
+                'previousSet' => $previousSetByPosition[$position] ?? $this->emptyPreviousSet($position),
             ];
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $previousPerformance
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function previousSetByPosition(array $previousPerformance): array
+    {
+        $previousSetByPosition = [];
+
+        foreach ($previousPerformance['sets'] ?? [] as $set) {
+            $position = (int) ($set['position'] ?? 0);
+
+            if ($position <= 0) {
+                continue;
+            }
+
+            $previousSetByPosition[$position] = $set + ['hasData' => true];
+        }
+
+        return $previousSetByPosition;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyPreviousSet(int $position): array
+    {
+        return [
+            'hasData' => false,
+            'position' => $position,
+            'label' => 'Aucun repere',
+            'volume' => '0',
+        ];
     }
 
     /**
@@ -213,6 +254,46 @@ final class ActiveWorkoutViewService
         return [
             'hasActiveSession' => false,
             'programs' => $programs,
+            'history' => $this->historySessions($profile),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function historySessions(\App\Entity\UserProfile $profile): array
+    {
+        return array_map(
+            fn (\App\Entity\WorkoutSession $session): array => $this->historySession($session),
+            $this->sessionRepository->findCompletedForProfile($profile),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function historySession(\App\Entity\WorkoutSession $session): array
+    {
+        $sessionExercises = $this->sessionExerciseRepository->findForSession($session);
+        $setCount = 0;
+        $volume = 0.0;
+
+        foreach ($sessionExercises as $sessionExercise) {
+            foreach ($this->setRepository->findForSessionExercise($sessionExercise) as $set) {
+                ++$setCount;
+                $volume += $set->getVolume();
+            }
+        }
+
+        return [
+            'id' => $session->getId(),
+            'name' => $session->getName(),
+            'date' => $session->getCompletedAt()?->format('d/m/Y') ?? $session->getStartedAt()->format('d/m/Y'),
+            'time' => $session->getCompletedAt()?->format('H:i') ?? $session->getStartedAt()->format('H:i'),
+            'exerciseCount' => count($sessionExercises),
+            'setCount' => $setCount,
+            'volume' => $this->formatNumber($volume),
+            'meta' => sprintf('%d exo%s - %d serie%s', count($sessionExercises), count($sessionExercises) > 1 ? 's' : '', $setCount, $setCount > 1 ? 's' : ''),
         ];
     }
 
@@ -265,6 +346,15 @@ final class ActiveWorkoutViewService
             'image' => 'https://placehold.co/900x700/18181b/ccff00?text=VIGOR',
             'restSeconds' => 90,
             'targetLabel' => '3 x 8-10',
+            'previousPerformance' => [
+                'hasData' => false,
+                'title' => 'Premiere fois suivie',
+                'subtitle' => 'Aucune seance terminee pour cet exercice.',
+                'summary' => 'Nouveau repere',
+                'volume' => '0',
+                'sets' => [],
+            ],
+            'history' => [],
             'sets' => [
                 ['id' => null, 'sessionExerciseId' => null, 'number' => 1, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],
                 ['id' => null, 'sessionExerciseId' => null, 'number' => 2, 'previous' => 'A completer', 'weight' => null, 'reps' => null, 'completed' => false],

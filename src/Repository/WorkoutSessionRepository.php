@@ -36,6 +36,23 @@ final class WorkoutSessionRepository extends ServiceEntityRepository implements 
             ->getSingleScalarResult();
     }
 
+    /**
+     * @return list<WorkoutSession>
+     */
+    public function findCompletedForProfile(UserProfile $profile, int $limit = 8): array
+    {
+        return $this->createQueryBuilder('session')
+            ->andWhere('session.profile = :profile')
+            ->andWhere('session.status = :status')
+            ->andWhere('session.completedAt IS NOT NULL')
+            ->setParameter('profile', $profile)
+            ->setParameter('status', WorkoutSession::STATUS_COMPLETED)
+            ->orderBy('session.completedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function longestCompletedStreakDays(UserProfile $profile): int
     {
         $sessions = $this->createQueryBuilder('session')

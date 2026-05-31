@@ -79,12 +79,15 @@ final class DashboardService
         }
 
         $activeMinutes = $activeSession ? max(1, (int) floor(($now->getTimestamp() - $activeSession->getStartedAt()->getTimestamp()) / 60)) : 0;
-        $minutes = min(60, $activeMinutes + ($todayCompletedSets * 4));
+        $targetMinutes = 60;
+        $targetKcal = $targetMinutes * 9;
+        $minutes = min($targetMinutes, $activeMinutes + ($todayCompletedSets * 4));
 
         return [
             'kcal' => max(0, (int) round(($minutes * 9) + ($todayVolume / 100))),
             'minutes' => $minutes,
-            'targetMinutes' => 60,
+            'targetMinutes' => $targetMinutes,
+            'targetKcal' => $targetKcal,
         ];
     }
 
@@ -277,7 +280,7 @@ final class DashboardService
     {
         return [
             'dateLabel' => $this->formatDateLabel(new \DateTimeImmutable()),
-            'activity' => ['kcal' => 0, 'minutes' => 0, 'targetMinutes' => 60],
+            'activity' => ['kcal' => 0, 'minutes' => 0, 'targetMinutes' => 60, 'targetKcal' => 540],
             'weekly' => [
                 'days' => [
                     ['day' => 'L', 'value' => '0', 'label' => 'Lundi', 'height' => 0, 'rest' => true, 'active' => false],

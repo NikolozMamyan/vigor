@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Exercise;
 use App\Entity\UserProfile;
 use App\Entity\WorkoutSession;
 use App\Entity\WorkoutSessionExercise;
@@ -52,6 +53,52 @@ final class WorkoutSetRepository extends ServiceEntityRepository implements Work
             'sessionExercise' => $sessionExercise,
             'position' => $position,
         ]);
+    }
+
+    /**
+     * @return list<WorkoutSet>
+     */
+    public function findPreviousCompletedForExercise(UserProfile $profile, Exercise $exercise, ?WorkoutSession $currentSession = null): array
+    {
+        $latestSessionQuery = $this->createQueryBuilder('workoutSet')
+            ->select('session.id AS sessionId')
+            ->join('workoutSet.sessionExercise', 'sessionExercise')
+            ->join('sessionExercise.session', 'session')
+            ->andWhere('session.profile = :profile')
+            ->andWhere('session.status = :sessionStatus')
+            ->andWhere('sessionExercise.exercise = :exercise')
+            ->andWhere('session.completedAt IS NOT NULL')
+            ->andWhere('workoutSet.completedAt IS NOT NULL')
+            ->setParameter('profile', $profile)
+            ->setParameter('sessionStatus', WorkoutSession::STATUS_COMPLETED)
+            ->setParameter('exercise', $exercise)
+            ->orderBy('session.completedAt', 'DESC')
+            ->addOrderBy('workoutSet.completedAt', 'DESC')
+            ->setMaxResults(1);
+
+        if ($currentSession?->getId()) {
+            $latestSessionQuery
+                ->andWhere('session.id != :currentSessionId')
+                ->setParameter('currentSessionId', $currentSession->getId());
+        }
+
+        $latestSession = $latestSessionQuery->getQuery()->getOneOrNullResult();
+
+        if (!$latestSession) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('workoutSet')
+            ->join('workoutSet.sessionExercise', 'sessionExercise')
+            ->join('sessionExercise.session', 'session')
+            ->andWhere('session.id = :sessionId')
+            ->andWhere('sessionExercise.exercise = :exercise')
+            ->andWhere('workoutSet.completedAt IS NOT NULL')
+            ->setParameter('sessionId', (int) $latestSession['sessionId'])
+            ->setParameter('exercise', $exercise)
+            ->orderBy('workoutSet.position', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     public function sumCompletedVolumeForProfile(UserProfile $profile): float
