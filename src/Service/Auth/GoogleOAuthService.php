@@ -84,6 +84,22 @@ final class GoogleOAuthService
         return $userProfile;
     }
 
+    public function authenticateIdToken(string $idToken): UserProfile
+    {
+        if ('' === trim($this->clientId)) {
+            throw new \RuntimeException('Google OAuth is not configured.');
+        }
+
+        $profile = $this->googleProfileFromIdToken($idToken);
+        $audience = (string) ($profile['aud'] ?? '');
+
+        if ('' !== $audience && !hash_equals($this->clientId, $audience)) {
+            throw new \RuntimeException('Google token audience is invalid.');
+        }
+
+        return $this->profileFromGoogleProfile($profile);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -130,6 +146,71 @@ final class GoogleOAuthService
         }
 
         return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function googleProfileFromIdToken(string $idToken): array
+    {
+        if ('' === trim($idToken)) {
+            throw new \RuntimeException('Google ID token is missing.');
+        }
+
+        $response = $this->httpClient->request('GET', 'https://oauth2.googleapis.com/tokeninfo', [
+            'query' => [
+                'id_token' => $idToken,
+            ],
+        ]);
+
+        $data = $response->toArray(false);
+
+        if (200 !== $response->getStatusCode()) {
+            throw new \RuntimeException('Unable to verify Google ID token.');
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $profile
+     */
+    private function profileFromGoogleProfile(array $profile): UserProfile
+    {
+        $email = mb_strtolower(trim((string) ($profile['email'] ?? '')));
+        $emailVerified = $profile['email_verified'] ?? false;
+        $emailVerified = true === $emailVerified || 'true' === $emailVerified || '1' === (string) $emailVerified;
+
+        if (!filter_var($email, \FILTER_VALIDATE_EMAIL) || !$emailVerified) {
+            throw new \RuntimeException('Google account email is not verified.');
+        }
+
+        $userProfile = $this->profileRepository->findOneBy(['email' => $email]);
+
+        if ($userProfile) {
+            $this->updateAvatar($userProfile, $profile);
+            $this->entityManager->flush();
+
+            return $userProfile;
+        }
+
+        $displayName = trim((string) ($profile['name'] ?? ''));
+        $displayName = '' !== $displayName ? $displayName : (string) strstr($email, '@', true);
+
+        $userProfile = (new UserProfile())
+            ->setDisplayName($displayName)
+            ->setEmail($email)
+            ->setUsername($this->uniqueUsername($displayName))
+            ->setPasswordHash(null)
+            ->setPreferredWeightUnit('kg')
+            ->setWeeklyWorkoutGoal(4)
+            ->setWeeklyVolumeGoal(14000);
+
+        $this->updateAvatar($userProfile, $profile);
+        $this->entityManager->persist($userProfile);
+        $this->entityManager->flush();
+
+        return $userProfile;
     }
 
     /**

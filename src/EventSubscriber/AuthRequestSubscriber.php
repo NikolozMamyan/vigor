@@ -66,6 +66,10 @@ final class AuthRequestSubscriber implements EventSubscriberInterface
             return true;
         }
 
+        if (\in_array($path, ['/api/auth/login', '/api/auth/register', '/api/auth/google-id-token'], true) && 'POST' === $method) {
+            return true;
+        }
+
         return '/api/exercises' === $path && 'GET' === $method;
     }
 }
