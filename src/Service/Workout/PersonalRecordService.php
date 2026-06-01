@@ -79,4 +79,14 @@ final class PersonalRecordService
 
         return $record;
     }
+
+    public function removeForSet(WorkoutSet $set): void
+    {
+        $metric = $set->getSessionExercise()->getSession()->getProfile()->getRecordMetricPreference();
+        $existingRecord = $this->recordRepository->findForWorkoutSet($set, $metric);
+
+        if ($existingRecord) {
+            $this->entityManager->remove($existingRecord);
+        }
+    }
 }

@@ -103,6 +103,14 @@ class WorkoutSet
         return $this;
     }
 
+    public function uncomplete(): self
+    {
+        $this->completedAt = null;
+        $this->estimatedOneRepMax = null;
+
+        return $this;
+    }
+
     public function getEstimatedOneRepMax(): ?float
     {
         return null === $this->estimatedOneRepMax ? null : (float) $this->estimatedOneRepMax;

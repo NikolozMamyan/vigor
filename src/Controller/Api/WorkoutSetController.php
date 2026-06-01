@@ -69,6 +69,21 @@ final class WorkoutSetController extends AbstractController
         }
     }
 
+    #[Route('/api/workout-sets/{id}/complete', name: 'api_workout_sets_uncomplete', methods: ['DELETE'])]
+    public function uncomplete(
+        WorkoutSet $set,
+        CurrentUserProfileProvider $currentUser,
+        WorkoutSetService $setService,
+    ): JsonResponse {
+        if (!$this->ownsSet($set, $currentUser->getProfile())) {
+            return $this->json(['error' => 'Workout set not found.'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $set = $setService->uncomplete($set);
+
+        return $this->json($this->normalizeSet($set));
+    }
+
     #[Route('/api/workout-sets/{id}', name: 'api_workout_sets_delete', methods: ['DELETE'])]
     public function delete(
         WorkoutSet $set,

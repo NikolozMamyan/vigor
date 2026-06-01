@@ -104,8 +104,19 @@ final class WorkoutSetService
         ];
     }
 
+    public function uncomplete(WorkoutSet $set): WorkoutSet
+    {
+        $this->personalRecordService->removeForSet($set);
+        $set->uncomplete();
+
+        $this->entityManager->flush();
+
+        return $set;
+    }
+
     public function delete(WorkoutSet $set): void
     {
+        $this->personalRecordService->removeForSet($set);
         $this->entityManager->remove($set);
         $this->entityManager->flush();
     }
