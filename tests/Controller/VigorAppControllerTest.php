@@ -24,8 +24,18 @@ final class VigorAppControllerTest extends WebTestCase
         self::assertSelectorExists('input[name="email"]');
         self::assertSelectorExists('input[name="password"]');
         self::assertSelectorExists('form[action="/register"]');
+        self::assertSelectorExists('a[href="/auth/google"]');
         self::assertSelectorExists('meta[name="turbo-cache-control"][content="no-cache"]');
         self::assertNoStoreResponse($client->getResponse());
+    }
+
+    public function testGoogleLoginRouteReportsMissingConfiguration(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/auth/google');
+
+        self::assertResponseStatusCodeSame(503);
+        self::assertSelectorTextContains('p.text-rose-400', 'Connexion Google indisponible');
     }
 
     public function testWorkoutRouteRedirectsAnonymousUserToLogin(): void

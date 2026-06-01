@@ -13,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 class AuthSession
 {
     public const CONNECTION_PASSWORD = 'password';
+    public const CONNECTION_GOOGLE = 'google';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -6,15 +6,19 @@ use App\Entity\UserProfile;
 use App\Repository\UserProfileRepository;
 use App\Service\Auth\AuthSessionManager;
 use App\Service\Auth\CurrentUserProfileProvider;
+use App\Service\Auth\GoogleOAuthService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class AuthController extends AbstractController
 {
+    private const GOOGLE_STATE_KEY = 'google_oauth_state';
+
     #[Route('/login', name: 'auth_login', methods: ['GET', 'POST'])]
     public function login(
         Request $request,
@@ -50,6 +54,55 @@ final class AuthController extends AbstractController
             'registerError' => $registerError,
             'email' => $email,
         ]);
+    }
+
+    #[Route('/auth/google', name: 'auth_google_start', methods: ['GET'])]
+    public function googleStart(Request $request, GoogleOAuthService $googleOAuth): Response
+    {
+        if (!$googleOAuth->isConfigured()) {
+            return $this->render('auth/login.html.twig', [
+                'error' => 'Connexion Google indisponible: configuration manquante.',
+                'registerError' => null,
+                'email' => '',
+            ], new Response('', Response::HTTP_SERVICE_UNAVAILABLE));
+        }
+
+        $state = bin2hex(random_bytes(24));
+        $request->getSession()->set(self::GOOGLE_STATE_KEY, $state);
+
+        return new RedirectResponse($googleOAuth->authorizationUrl($this->googleRedirectUri(), $state));
+    }
+
+    #[Route('/auth/google/callback', name: 'auth_google_callback', methods: ['GET'])]
+    public function googleCallback(
+        Request $request,
+        GoogleOAuthService $googleOAuth,
+        AuthSessionManager $sessionManager,
+    ): Response {
+        $session = $request->getSession();
+        $expectedState = (string) $session->get(self::GOOGLE_STATE_KEY, '');
+        $session->remove(self::GOOGLE_STATE_KEY);
+        $receivedState = (string) $request->query->get('state', '');
+        $code = (string) $request->query->get('code', '');
+
+        if ('' === $expectedState || !hash_equals($expectedState, $receivedState) || '' === $code) {
+            return $this->renderGoogleError('Connexion Google annulee ou invalide.');
+        }
+
+        if ($request->query->has('error')) {
+            return $this->renderGoogleError('Connexion Google annulee.');
+        }
+
+        try {
+            $profile = $googleOAuth->authenticate($code, $this->googleRedirectUri());
+            $created = $sessionManager->createGoogleSession($profile, $request);
+            $response = new RedirectResponse($this->generateUrl('vigor_app', ['view' => 'home']));
+            $sessionManager->attachLoginCookies($response, $request, $created['plainToken'], $created['deviceId'], $created['session']->getExpiresAt());
+
+            return $response;
+        } catch (\Throwable) {
+            return $this->renderGoogleError('Impossible de se connecter avec Google.');
+        }
     }
 
     #[Route('/register', name: 'auth_register', methods: ['POST'])]
@@ -126,5 +179,19 @@ final class AuthController extends AbstractController
         }
 
         return $username;
+    }
+
+    private function googleRedirectUri(): string
+    {
+        return $this->generateUrl('auth_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
+    }
+
+    private function renderGoogleError(string $message): Response
+    {
+        return $this->render('auth/login.html.twig', [
+            'error' => $message,
+            'registerError' => null,
+            'email' => '',
+        ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
     }
 }

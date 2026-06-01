@@ -26,10 +26,26 @@ final class AuthSessionManager
      */
     public function createPasswordSession(UserProfile $profile, Request $request): array
     {
+        return $this->createSession($profile, $request, AuthSession::CONNECTION_PASSWORD);
+    }
+
+    /**
+     * @return array{session: AuthSession, plainToken: string, deviceId: string}
+     */
+    public function createGoogleSession(UserProfile $profile, Request $request): array
+    {
+        return $this->createSession($profile, $request, AuthSession::CONNECTION_GOOGLE);
+    }
+
+    /**
+     * @return array{session: AuthSession, plainToken: string, deviceId: string}
+     */
+    private function createSession(UserProfile $profile, Request $request, string $connectionType): array
+    {
         $plainToken = bin2hex(random_bytes(32));
         $deviceId = $request->cookies->get(DeviceIdentifier::COOKIE_NAME) ?: $this->deviceIdentifier->generate();
         $expiresAt = new \DateTimeImmutable('+90 days');
-        $session = (new AuthSession($profile, $this->hashToken($plainToken), $deviceId, AuthSession::CONNECTION_PASSWORD, $expiresAt))
+        $session = (new AuthSession($profile, $this->hashToken($plainToken), $deviceId, $connectionType, $expiresAt))
             ->setIpAddress($request->getClientIp())
             ->setUserAgent(substr((string) $request->headers->get('User-Agent'), 0, 1000));
 

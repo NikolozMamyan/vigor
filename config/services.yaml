@@ -26,3 +26,8 @@ services:
     App\Repository\PersonalRecordReaderInterface: '@App\Repository\PersonalRecordRepository'
     App\Repository\WorkoutSessionReaderInterface: '@App\Repository\WorkoutSessionRepository'
     App\Repository\WorkoutProgramExerciseReaderInterface: '@App\Repository\WorkoutProgramExerciseRepository'
+
+    App\Service\Auth\GoogleOAuthService:
+        arguments:
+            $clientId: '%env(GOOGLE_CLIENT_ID)%'
+            $clientSecret: '%env(GOOGLE_CLIENT_SECRET)%'
