@@ -17,6 +17,7 @@ export default class extends Controller {
         this.active = false;
         this.notified = false;
         this.notificationContext = null;
+        this.skipNextNativeCancel = false;
         this.particles = [];
         this.particleFrame = null;
         this.canvasContext = this.hasCanvasTarget ? this.canvasTarget.getContext('2d') : null;
@@ -81,6 +82,7 @@ export default class extends Controller {
         this.persistState();
         this.show();
         this.expand();
+        this.scheduleNativeNotification();
         this.scheduleTick();
     }
 
@@ -94,6 +96,12 @@ export default class extends Controller {
         this.active = false;
         this.endsAt = null;
         this.clearStoredState();
+
+        if (this.skipNextNativeCancel) {
+            this.skipNextNativeCancel = false;
+        } else {
+            this.cancelNativeNotification();
+        }
 
         if (!this.hasModalTarget) {
             return;
@@ -171,6 +179,7 @@ export default class extends Controller {
         this.endsAt = Date.now() + this.timeLeft * 1000;
         this.update();
         this.persistState();
+        this.scheduleNativeNotification();
 
         if (navigator.vibrate) {
             navigator.vibrate(25);
@@ -194,6 +203,7 @@ export default class extends Controller {
         this.clearStoredState();
         this.modalTarget.classList.add('is-triggered');
         this.playFinishSound();
+        this.skipNextNativeCancel = shouldNotify;
 
         if (shouldNotify) {
             this.notifyRestFinished();
@@ -331,8 +341,51 @@ export default class extends Controller {
         }
 
         this.scheduleTick();
+        this.scheduleNativeNotification();
 
         return true;
+    }
+
+    scheduleNativeNotification() {
+        if (!this.active || !this.endsAt || this.timeLeft <= 0) {
+            this.cancelNativeNotification();
+            return false;
+        }
+
+        const notification = this.notificationContext || {
+            title: 'Repos termine',
+            body: 'Ton prochain set est pret.',
+            url: '/app/workout',
+        };
+
+        return this.postMobileMessage({
+            type: 'timer:schedule',
+            id: 'rest-timer',
+            seconds: Math.max(1, Math.ceil((this.endsAt - Date.now()) / 1000)),
+            title: notification.title,
+            body: notification.body,
+            url: notification.url,
+        });
+    }
+
+    cancelNativeNotification() {
+        return this.postMobileMessage({
+            type: 'timer:cancel',
+            id: 'rest-timer',
+        });
+    }
+
+    postMobileMessage(message) {
+        try {
+            if (typeof window.VigorMobile?.postMessage !== 'function') {
+                return false;
+            }
+
+            window.VigorMobile.postMessage(message);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     readStoredState() {

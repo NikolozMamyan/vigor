@@ -87,6 +87,19 @@ body.overflow-hidden .workout-finish-bar {
     pointer-events: none;
 }
 
+body.overflow-hidden .app-main {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+body.overflow-hidden .app-modal-scroll,
+body.overflow-hidden .app-modal-sheet {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
 .workout-builder-open > .app-bottom-nav:not(.builder-bottom-nav) {
     display: none;
 }
@@ -565,6 +578,31 @@ input[type="number"]::-webkit-outer-spin-button {
 .app-modal-scroll {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+}
+
+html.vigor-mobile-shell .glass-panel,
+html.vigor-mobile-shell .glass-panel-heavy,
+html.vigor-mobile-shell .app-bottom-nav,
+html.vigor-mobile-shell .app-modal-sheet,
+html.vigor-mobile-shell [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+html.vigor-mobile-shell .ambient-blob-1,
+html.vigor-mobile-shell .ambient-blob-2 {
+    animation: none !important;
+    display: none;
+}
+
+html.vigor-mobile-shell .pulse-glow,
+html.vigor-mobile-shell .animate-pulse,
+html.vigor-mobile-shell [class*="animate-pulse"] {
+    animation: none !important;
+}
+
+html.vigor-mobile-shell .tab-content {
+    transition-duration: 0.18s;
 }
 
 .badge-item {
