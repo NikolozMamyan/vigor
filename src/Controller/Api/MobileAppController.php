@@ -44,6 +44,7 @@ final class MobileAppController extends AbstractController
                 'displayName' => $profile->getDisplayName(),
                 'username' => $profile->getUsername(),
                 'email' => $profile->getEmail(),
+                'avatarUrl' => $profileView['profile']['avatarUrl'] ?? null,
             ],
             'navItems' => [
                 ['id' => 'home', 'label' => 'Accueil', 'icon' => 'layout-grid'],

@@ -7,6 +7,7 @@ use App\Repository\UserProfileRepository;
 use App\Service\Auth\AuthSessionManager;
 use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Auth\GoogleOAuthService;
+use App\Service\Auth\MobileAuthTicketStore;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -18,6 +19,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class AuthController extends AbstractController
 {
     private const GOOGLE_STATE_KEY = 'google_oauth_state';
+    private const GOOGLE_MOBILE_KEY = 'google_oauth_mobile';
+    private const GOOGLE_MOBILE_REDIRECT = 'vigorapp://auth/google';
 
     #[Route('/login', name: 'auth_login', methods: ['GET', 'POST'])]
     public function login(
@@ -68,7 +71,9 @@ final class AuthController extends AbstractController
         }
 
         $state = bin2hex(random_bytes(24));
-        $request->getSession()->set(self::GOOGLE_STATE_KEY, $state);
+        $session = $request->getSession();
+        $session->set(self::GOOGLE_STATE_KEY, $state);
+        $session->set(self::GOOGLE_MOBILE_KEY, '1' === (string) $request->query->get('mobile', '0'));
 
         return new RedirectResponse($googleOAuth->authorizationUrl($this->googleRedirectUri(), $state));
     }
@@ -78,29 +83,54 @@ final class AuthController extends AbstractController
         Request $request,
         GoogleOAuthService $googleOAuth,
         AuthSessionManager $sessionManager,
+        MobileAuthTicketStore $mobileAuthTickets,
     ): Response {
         $session = $request->getSession();
         $expectedState = (string) $session->get(self::GOOGLE_STATE_KEY, '');
+        $mobile = true === $session->get(self::GOOGLE_MOBILE_KEY, false);
         $session->remove(self::GOOGLE_STATE_KEY);
+        $session->remove(self::GOOGLE_MOBILE_KEY);
         $receivedState = (string) $request->query->get('state', '');
         $code = (string) $request->query->get('code', '');
 
         if ('' === $expectedState || !hash_equals($expectedState, $receivedState) || '' === $code) {
+            if ($mobile) {
+                return $this->mobileGoogleRedirect(error: 'Connexion Google annulee ou invalide.');
+            }
+
             return $this->renderGoogleError('Connexion Google annulee ou invalide.');
         }
 
         if ($request->query->has('error')) {
+            if ($mobile) {
+                return $this->mobileGoogleRedirect(error: 'Connexion Google annulee.');
+            }
+
             return $this->renderGoogleError('Connexion Google annulee.');
         }
 
         try {
             $profile = $googleOAuth->authenticate($code, $this->googleRedirectUri());
             $created = $sessionManager->createGoogleSession($profile, $request);
+            if ($mobile) {
+                return $this->mobileGoogleRedirect(
+                    ticket: $mobileAuthTickets->create(
+                        $created['plainToken'],
+                        $created['deviceId'],
+                        $created['session']->getExpiresAt(),
+                    ),
+                );
+            }
+
             $response = new RedirectResponse($this->generateUrl('vigor_app', ['view' => 'home']));
             $sessionManager->attachLoginCookies($response, $request, $created['plainToken'], $created['deviceId'], $created['session']->getExpiresAt());
 
             return $response;
         } catch (\Throwable) {
+            if ($mobile) {
+                return $this->mobileGoogleRedirect(error: 'Impossible de se connecter avec Google.');
+            }
+
             return $this->renderGoogleError('Impossible de se connecter avec Google.');
         }
     }
@@ -193,5 +223,14 @@ final class AuthController extends AbstractController
             'registerError' => null,
             'email' => '',
         ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    private function mobileGoogleRedirect(?string $ticket = null, ?string $error = null): RedirectResponse
+    {
+        $query = null !== $error
+            ? ['error' => $error]
+            : ['ticket' => $ticket];
+
+        return new RedirectResponse(self::GOOGLE_MOBILE_REDIRECT.'?'.http_build_query($query, '', '&', \PHP_QUERY_RFC3986));
     }
 }

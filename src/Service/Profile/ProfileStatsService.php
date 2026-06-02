@@ -8,6 +8,7 @@ use App\Repository\WorkoutSessionRepository;
 use App\Repository\WorkoutSetRepository;
 use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Dashboard\WeeklyGoalService;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class ProfileStatsService
 {
@@ -17,6 +18,7 @@ final class ProfileStatsService
         private readonly WorkoutSetRepository $setRepository,
         private readonly PersonalRecordRepository $recordRepository,
         private readonly WeeklyGoalService $weeklyGoalService,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
@@ -66,7 +68,8 @@ final class ProfileStatsService
         return [
             'displayName' => $profile->getDisplayName(),
             'username' => $profile->getUsername(),
-            'avatarUrl' => $profile->getAvatarUrl() ?? 'https://placehold.co/200x200/18181b/ccff00?text='.mb_strtoupper(mb_substr($profile->getDisplayName(), 0, 2)),
+            'avatarUrl' => $this->absoluteAvatarUrl($profile->getAvatarUrl()),
+            'initials' => $this->initials($profile->getDisplayName()),
             'joinedLabel' => $this->joinedLabel($profile->getJoinedAt()),
             'levelLabel' => 'Niveau '.$this->levelFor($profile).' - Avance',
         ];
@@ -117,7 +120,8 @@ final class ProfileStatsService
             'profile' => [
                 'displayName' => 'Profil indisponible',
                 'username' => '',
-                'avatarUrl' => 'https://placehold.co/200x200/18181b/ccff00?text=--',
+                'avatarUrl' => null,
+                'initials' => '--',
                 'joinedLabel' => '',
                 'levelLabel' => 'Aucune donnee',
             ],
@@ -137,5 +141,28 @@ final class ProfileStatsService
                 ['label' => 'Objectif hebdo', 'description' => '4 seances - 14T', 'icon' => 'target'],
             ],
         ];
+    }
+
+    private function absoluteAvatarUrl(?string $avatarUrl): ?string
+    {
+        if (null === $avatarUrl || '' === $avatarUrl || str_starts_with($avatarUrl, 'http://') || str_starts_with($avatarUrl, 'https://')) {
+            return $avatarUrl ?: null;
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+
+        if (!$request) {
+            return $avatarUrl;
+        }
+
+        return rtrim($request->getSchemeAndHttpHost(), '/').'/'.ltrim($avatarUrl, '/');
+    }
+
+    private function initials(string $name): string
+    {
+        $parts = array_values(array_filter(preg_split('/\s+/', trim($name)) ?: []));
+        $letters = array_map(static fn (string $part): string => mb_substr($part, 0, 1), array_slice($parts, 0, 2));
+
+        return mb_strtoupper(implode('', $letters) ?: 'VI');
     }
 }

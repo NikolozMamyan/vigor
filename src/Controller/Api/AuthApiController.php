@@ -7,6 +7,7 @@ use App\Repository\UserProfileRepository;
 use App\Service\Auth\AuthSessionManager;
 use App\Service\Auth\CurrentUserProfileProvider;
 use App\Service\Auth\GoogleOAuthService;
+use App\Service\Auth\MobileAuthTicketStore;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -106,6 +107,33 @@ final class AuthApiController extends AbstractController
             return $this->json(['error' => 'Invalid JSON payload.'], JsonResponse::HTTP_BAD_REQUEST);
         } catch (\Throwable $exception) {
             return $this->json(['error' => $exception->getMessage()], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    #[Route('/api/auth/mobile-ticket', name: 'api_auth_mobile_ticket', methods: ['POST'])]
+    public function mobileTicket(Request $request, MobileAuthTicketStore $mobileAuthTickets, AuthSessionManager $sessionManager): JsonResponse
+    {
+        try {
+            $payload = json_decode($request->getContent() ?: '{}', true, 512, \JSON_THROW_ON_ERROR);
+            $ticket = (string) ($payload['ticket'] ?? '');
+            $mobileSession = $mobileAuthTickets->consume($ticket);
+
+            if (null === $mobileSession) {
+                return $this->json(['error' => 'Session Google mobile expiree.'], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $response = $this->json(['ok' => true]);
+            $sessionManager->attachLoginCookies(
+                $response,
+                $request,
+                $mobileSession['plainToken'],
+                $mobileSession['deviceId'],
+                $mobileSession['expiresAt'],
+            );
+
+            return $response;
+        } catch (\JsonException) {
+            return $this->json(['error' => 'Invalid JSON payload.'], JsonResponse::HTTP_BAD_REQUEST);
         }
     }
 

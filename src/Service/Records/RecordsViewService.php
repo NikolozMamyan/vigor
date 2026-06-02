@@ -89,8 +89,8 @@ final class RecordsViewService
     private function formatRecord(PersonalRecord $record, array $exerciseRecords): array
     {
         $set = $record->getWorkoutSet();
+        usort($exerciseRecords, static fn (PersonalRecord $a, PersonalRecord $b): int => $b->getAchievedAt()->getTimestamp() <=> $a->getAchievedAt()->getTimestamp());
         $history = array_slice($exerciseRecords, 0, 5);
-        usort($history, static fn (PersonalRecord $a, PersonalRecord $b): int => $a->getAchievedAt()->getTimestamp() <=> $b->getAchievedAt()->getTimestamp());
         $previous = $record->getPreviousValue();
         $delta = null !== $previous ? $record->getValue() - $previous : $record->getValue();
 
@@ -119,6 +119,8 @@ final class RecordsViewService
 
         return [
             'date' => $this->shortDateLabel($record->getAchievedAt()),
+            'achievedAt' => $record->getAchievedAt()->format(\DateTimeInterface::ATOM),
+            'achievedAtTimestamp' => $record->getAchievedAt()->getTimestamp(),
             'weight' => $this->formatNumber($set->getWeight()),
             'reps' => $set->getReps(),
             'estimatedOneRepMax' => $this->formatNumber($record->getValue()),
