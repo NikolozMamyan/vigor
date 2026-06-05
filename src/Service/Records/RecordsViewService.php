@@ -91,6 +91,7 @@ final class RecordsViewService
         $set = $record->getWorkoutSet();
         usort($exerciseRecords, static fn (PersonalRecord $a, PersonalRecord $b): int => $b->getAchievedAt()->getTimestamp() <=> $a->getAchievedAt()->getTimestamp());
         $history = array_slice($exerciseRecords, 0, 5);
+        usort($history, static fn (PersonalRecord $a, PersonalRecord $b): int => $a->getAchievedAt()->getTimestamp() <=> $b->getAchievedAt()->getTimestamp());
         $previous = $record->getPreviousValue();
         $delta = null !== $previous ? $record->getValue() - $previous : $record->getValue();
 

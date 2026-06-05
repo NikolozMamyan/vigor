@@ -57,7 +57,7 @@ final class WorkoutSetService
             ->complete($completedAt, $estimate);
 
         $this->entityManager->persist($set);
-        $this->personalRecordService->detectAfterCompletedSet($set, $estimate);
+        $this->personalRecordService->recalculateForSet($set);
         $this->entityManager->flush();
 
         return $set;
@@ -74,7 +74,7 @@ final class WorkoutSetService
         if ($set->getCompletedAt()) {
             $estimate = $this->oneRepMaxCalculator->estimate($weight, $reps);
             $set->complete($set->getCompletedAt(), $estimate);
-            $this->personalRecordService->syncAfterUpdatedSet($set, $estimate);
+            $this->personalRecordService->recalculateForSet($set);
         }
 
         $this->entityManager->flush();
@@ -92,7 +92,7 @@ final class WorkoutSetService
         $estimate = $this->oneRepMaxCalculator->estimate($set->getWeight(), $set->getReps());
 
         $set->complete(new \DateTimeImmutable(), $estimate);
-        $record = $this->personalRecordService->detectAfterCompletedSet($set, $estimate);
+        $record = $this->personalRecordService->recalculateForSet($set);
 
         $this->entityManager->flush();
 
@@ -106,8 +106,8 @@ final class WorkoutSetService
 
     public function uncomplete(WorkoutSet $set): WorkoutSet
     {
-        $this->personalRecordService->removeForSet($set);
         $set->uncomplete();
+        $this->personalRecordService->recalculateForSet($set, false);
 
         $this->entityManager->flush();
 
@@ -116,7 +116,7 @@ final class WorkoutSetService
 
     public function delete(WorkoutSet $set): void
     {
-        $this->personalRecordService->removeForSet($set);
+        $this->personalRecordService->recalculateForSet($set, false);
         $this->entityManager->remove($set);
         $this->entityManager->flush();
     }
@@ -134,8 +134,12 @@ final class WorkoutSetService
 
     private function assertValidSetData(float $weight, int $reps): void
     {
-        if ($weight <= 0 || $reps <= 0) {
-            throw new \InvalidArgumentException('Weight and reps must be greater than zero.');
+        if ($weight <= 0 || $weight > OneRepMaxCalculator::MAX_WEIGHT_KG) {
+            throw new \InvalidArgumentException('Weight must be greater than zero and at most 2000 kg.');
+        }
+
+        if ($reps <= 0) {
+            throw new \InvalidArgumentException('Reps must be greater than zero.');
         }
     }
 }

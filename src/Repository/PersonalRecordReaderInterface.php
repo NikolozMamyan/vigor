@@ -12,4 +12,9 @@ interface PersonalRecordReaderInterface
     public function findBest(UserProfile $profile, Exercise $exercise, string $metric): ?PersonalRecord;
 
     public function findForWorkoutSet(WorkoutSet $set, string $metric): ?PersonalRecord;
+
+    /**
+     * @return list<PersonalRecord>
+     */
+    public function findAllForExercise(UserProfile $profile, Exercise $exercise, string $metric): array;
 }

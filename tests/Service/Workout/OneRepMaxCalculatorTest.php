@@ -26,6 +26,7 @@ final class OneRepMaxCalculatorTest extends TestCase
         $calculator = new OneRepMaxCalculator();
 
         self::assertSame(0.0, $calculator->estimate(0, 10));
+        self::assertSame(0.0, $calculator->estimate(2000.01, 1));
         self::assertSame(0.0, $calculator->estimate(100, 0));
     }
 }

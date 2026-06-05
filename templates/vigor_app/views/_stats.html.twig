@@ -1,12 +1,24 @@
-<section id="view-stats" class="tab-content {{ activeView == 'stats' ? 'active' }} px-6 space-y-6" data-vigor-navigation-target="view" data-view="stats">
+<section
+    id="view-stats"
+    class="tab-content {{ activeView == 'stats' ? 'active' }} px-6 space-y-6"
+    data-vigor-navigation-target="view"
+    data-view="stats"
+    data-controller="stats"
+    data-stats-period-value="{{ statsAnalytics.period }}"
+    data-stats-volume-value="{{ statsAnalytics.totalVolumeTons }}"
+    data-stats-trend-value="{{ statsAnalytics.trendPercent }}"
+>
     <div class="pt-2 flex items-center justify-between">
         <div>
             <p class="text-[10px] text-app-muted uppercase font-black tracking-widest mb-1">Tableau de bord</p>
             <h2 class="text-3xl font-black text-white tracking-tight">Analyses elite</h2>
         </div>
-        <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-accent hover:bg-app-accent hover:text-black transition-all btn-bounce" aria-label="Partager les statistiques">
-            <i data-lucide="share-2" class="w-4 h-4"></i>
-        </button>
+        <div class="relative">
+            <button type="button" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-app-accent hover:bg-app-accent hover:text-black transition-all btn-bounce" data-action="stats#share" data-stats-target="shareButton" aria-label="Partager les statistiques">
+                <i data-lucide="share-2" class="w-4 h-4" data-stats-target="shareIcon"></i>
+            </button>
+            <span class="absolute right-0 top-12 z-30 whitespace-nowrap rounded-xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-[10px] font-bold text-white opacity-0 pointer-events-none translate-y-1 transition-all" data-stats-target="status" role="status" aria-live="polite"></span>
+        </div>
     </div>
 
     {% set periodIndex = statsAnalytics.period == 'month' ? 1 : (statsAnalytics.period == 'quarter' ? 2 : 0) %}

@@ -56,11 +56,18 @@ body {
     height: 100svh;
     position: relative;
     touch-action: pan-y;
+    isolation: isolate;
 }
 
 @supports (height: 100dvh) {
     .app-container {
         height: 100dvh;
+    }
+}
+
+@media (min-width: 640px) {
+    .app-container {
+        height: calc(100dvh - 2rem);
     }
 }
 
@@ -188,6 +195,41 @@ body.overflow-hidden .app-modal-sheet {
 
 .btn-press:active {
     transform: scale(0.96);
+}
+
+.btn-bounce {
+    transition: transform 0.18s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-bounce:active {
+    transform: scale(0.94);
+}
+
+.nav-btn .nav-label {
+    color: var(--app-muted);
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-btn.active .nav-label {
+    color: #fff;
+}
+
+.nav-btn.active[data-vigor-navigation-view-param="workout"] .nav-label {
+    color: var(--app-accent);
+}
+
+.view-refreshing {
+    cursor: progress;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 3px;
 }
 
 .builder-exercise-card {
@@ -624,6 +666,21 @@ html.vigor-mobile-shell .tab-content {
 
 .nav-btn.active .nav-icon {
     color: #fff;
+}
+
+.nav-btn.active[data-vigor-navigation-view-param="workout"] .nav-icon {
+    color: var(--app-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 @keyframes vigorBlob {

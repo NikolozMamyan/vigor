@@ -21,6 +21,7 @@ final class PersonalRecordDetector
     {
         return (new PersonalRecord($profile, $exercise, $set, $candidateValue))
             ->setMetric(PersonalRecord::METRIC_ESTIMATED_1RM)
-            ->setPreviousValue($currentBest?->getValue());
+            ->setPreviousValue($currentBest?->getValue())
+            ->setAchievedAt($set->getCompletedAt() ?? new \DateTimeImmutable());
     }
 }

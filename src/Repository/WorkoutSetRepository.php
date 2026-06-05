@@ -101,6 +101,33 @@ final class WorkoutSetRepository extends ServiceEntityRepository implements Work
             ->getResult();
     }
 
+    /**
+     * @return list<WorkoutSet>
+     */
+    public function findCompletedForRecordCalculation(UserProfile $profile, Exercise $exercise): array
+    {
+        return $this->createQueryBuilder('workoutSet')
+            ->join('workoutSet.sessionExercise', 'sessionExercise')
+            ->join('sessionExercise.session', 'session')
+            ->andWhere('session.profile = :profile')
+            ->andWhere('sessionExercise.exercise = :exercise')
+            ->andWhere('session.status IN (:sessionStatuses)')
+            ->andWhere('workoutSet.completedAt IS NOT NULL')
+            ->setParameter('profile', $profile)
+            ->setParameter('exercise', $exercise)
+            ->setParameter('sessionStatuses', [
+                WorkoutSession::STATUS_ACTIVE,
+                WorkoutSession::STATUS_COMPLETED,
+            ])
+            ->orderBy('workoutSet.completedAt', 'ASC')
+            ->addOrderBy('session.startedAt', 'ASC')
+            ->addOrderBy('sessionExercise.position', 'ASC')
+            ->addOrderBy('workoutSet.position', 'ASC')
+            ->addOrderBy('workoutSet.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function sumCompletedVolumeForProfile(UserProfile $profile): float
     {
         return (float) ($this->createQueryBuilder('workoutSet')

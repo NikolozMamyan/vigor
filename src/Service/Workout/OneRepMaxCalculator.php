@@ -4,9 +4,11 @@ namespace App\Service\Workout;
 
 final class OneRepMaxCalculator
 {
+    public const MAX_WEIGHT_KG = 2000.0;
+
     public function estimate(float $weight, int $reps): float
     {
-        if ($weight <= 0 || $reps <= 0) {
+        if ($weight <= 0 || $weight > self::MAX_WEIGHT_KG || $reps <= 0) {
             return 0.0;
         }
 

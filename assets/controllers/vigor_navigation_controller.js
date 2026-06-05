@@ -87,9 +87,12 @@ export default class extends Controller {
             element.classList.toggle('active', element.dataset.view === view);
         });
 
+        let activeButton = null;
+
         this.buttonTargets.forEach((button) => {
             const isActive = button.dataset.vigorNavigationViewParam === view;
             button.classList.toggle('active', isActive);
+            button.setAttribute('aria-current', isActive ? 'page' : 'false');
 
             const icon = button.querySelector('.nav-icon');
             if (icon) {
@@ -100,12 +103,17 @@ export default class extends Controller {
             }
 
             if (isActive) {
+                activeButton = button;
                 this.moveIndicator(button, view);
             }
         });
 
-        if (pushState) {
-            this.replaceCurrentHistoryState(view);
+        if (!activeButton && this.hasIndicatorTarget) {
+            this.indicatorTarget.style.opacity = '0';
+        }
+
+        if (pushState && changed) {
+            this.pushCurrentHistoryState(view);
         }
 
         if (changed) {
@@ -434,8 +442,11 @@ export default class extends Controller {
         }
 
         this.show(view, false);
-        this.replaceCurrentHistoryState(view);
-        this.refreshViews({ views: [view], nextView: view, path: `/app/${view}` });
+        this.refreshViews({
+            views: [view],
+            nextView: view,
+            path: this.pathForView(view),
+        });
     }
 
     replaceCurrentHistoryState(view) {
@@ -447,7 +458,25 @@ export default class extends Controller {
             ? window.history.state
             : {};
 
-        window.history.replaceState({ ...currentState, view }, '', `/app/${view}`);
+        window.history.replaceState({ ...currentState, view }, '', this.pathForView(view));
+    }
+
+    pushCurrentHistoryState(view) {
+        if (!this.views.includes(view)) {
+            return;
+        }
+
+        const currentState = window.history.state && typeof window.history.state === 'object'
+            ? window.history.state
+            : {};
+
+        window.history.pushState({ ...currentState, view }, '', `/app/${view}`);
+    }
+
+    pathForView(view) {
+        const search = this.viewFromPath() === view ? window.location.search : '';
+
+        return `/app/${view}${search}`;
     }
 
     moveIndicator(button, view) {
@@ -459,6 +488,7 @@ export default class extends Controller {
         const buttonRect = button.getBoundingClientRect();
         const offsetLeft = buttonRect.left - parentRect.left;
 
+        this.indicatorTarget.style.width = `${buttonRect.width}px`;
         this.indicatorTarget.style.transform = `translateX(${offsetLeft - 8}px)`;
         this.indicatorTarget.style.opacity = view === 'workout' ? '0' : '1';
     }

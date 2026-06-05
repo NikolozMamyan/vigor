@@ -48,7 +48,7 @@ final class VigorAppController extends AbstractController
             'navItems' => [
                 ['id' => 'home', 'label' => 'Accueil', 'icon' => 'layout-grid'],
                 ['id' => 'workout', 'label' => 'Seance', 'icon' => 'play'],
-                ['id' => 'library', 'label' => 'Bibliotheque', 'icon' => 'search'],
+                ['id' => 'library', 'label' => 'Exercices', 'icon' => 'search'],
                 ['id' => 'stats', 'label' => 'Stats', 'icon' => 'bar-chart-2'],
                 ['id' => 'records', 'label' => 'Records', 'icon' => 'trophy'],
             ],

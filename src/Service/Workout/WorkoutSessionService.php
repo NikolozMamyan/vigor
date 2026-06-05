@@ -20,6 +20,7 @@ final class WorkoutSessionService
         private readonly WorkoutSessionReaderInterface $sessionRepository,
         private readonly WorkoutProgramExerciseReaderInterface $programExerciseRepository,
         private readonly ?WorkoutSessionExerciseReaderInterface $sessionExerciseRepository = null,
+        private readonly ?PersonalRecordService $personalRecordService = null,
     ) {
     }
 
@@ -151,6 +152,11 @@ final class WorkoutSessionService
             throw new \InvalidArgumentException('A workout session must keep at least one exercise.');
         }
 
+        $this->personalRecordService?->recalculateForExercise(
+            $session->getProfile(),
+            $sessionExercise->getExercise(),
+            excludedSessionExercise: $sessionExercise,
+        );
         $this->entityManager->remove($sessionExercise);
         $this->entityManager->flush();
     }
@@ -159,6 +165,7 @@ final class WorkoutSessionService
     {
         $this->assertActive($session);
 
+        $this->recalculateRecordsExcludingSession($session);
         $session->cancel();
         $this->entityManager->flush();
 
@@ -169,6 +176,7 @@ final class WorkoutSessionService
     {
         $this->assertCompletedHistorySession($session);
 
+        $this->recalculateRecordsExcludingSession($session);
         $this->entityManager->remove($session);
         $this->entityManager->flush();
     }
@@ -184,6 +192,31 @@ final class WorkoutSessionService
     {
         if (WorkoutSession::STATUS_COMPLETED !== $session->getStatus()) {
             throw new \InvalidArgumentException('Only completed workout sessions can be edited from history.');
+        }
+    }
+
+    private function recalculateRecordsExcludingSession(WorkoutSession $session): void
+    {
+        if (!$this->personalRecordService || !$this->sessionExerciseRepository) {
+            return;
+        }
+
+        $seenExercises = [];
+
+        foreach ($this->sessionExerciseRepository->findForSession($session) as $sessionExercise) {
+            $exercise = $sessionExercise->getExercise();
+            $exerciseKey = $exercise->getId() ?? spl_object_id($exercise);
+
+            if (isset($seenExercises[$exerciseKey])) {
+                continue;
+            }
+
+            $seenExercises[$exerciseKey] = true;
+            $this->personalRecordService->recalculateForExercise(
+                $session->getProfile(),
+                $exercise,
+                excludedSession: $session,
+            );
         }
     }
 }

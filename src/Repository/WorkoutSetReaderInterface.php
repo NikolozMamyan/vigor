@@ -21,4 +21,9 @@ interface WorkoutSetReaderInterface
      * @return list<WorkoutSet>
      */
     public function findPreviousCompletedForExercise(UserProfile $profile, Exercise $exercise, ?WorkoutSession $currentSession = null): array;
+
+    /**
+     * @return list<WorkoutSet>
+     */
+    public function findCompletedForRecordCalculation(UserProfile $profile, Exercise $exercise): array;
 }

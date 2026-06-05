@@ -48,6 +48,18 @@ final class PersonalRecordRepository extends ServiceEntityRepository implements 
     /**
      * @return list<PersonalRecord>
      */
+    public function findAllForExercise(UserProfile $profile, Exercise $exercise, string $metric): array
+    {
+        return $this->findBy([
+            'profile' => $profile,
+            'exercise' => $exercise,
+            'metric' => $metric,
+        ]);
+    }
+
+    /**
+     * @return list<PersonalRecord>
+     */
     public function findRecentForProfile(UserProfile $profile, int $limit = 10): array
     {
         return $this->createQueryBuilder('record')
